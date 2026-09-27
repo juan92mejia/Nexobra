@@ -22,37 +22,45 @@
   html { scroll-padding-top: env(safe-area-inset-top,0px); }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font-family:'Source Sans 3',sans-serif; line-height:1.5; }
-  h1,h2 { font-family:'Montserrat',sans-serif; font-weight:700; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 80px; }
+  h1,h2,h3 { font-family:'Montserrat',sans-serif; font-weight:700; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 28px 20px 80px; }
   a.back { color: var(--ink-soft); text-decoration: none; font-size: 14px; }
   header { border-bottom: 3px solid var(--ink); padding-bottom: 18px; margin: 12px 0 28px; }
-  header .brand { font-size: 13px; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
-  header h1 { font-size: 28px; margin: 0 0 6px; }
+  header .brand { font-size: 13px; color: var(--accent); font-weight: 700; margin-bottom: 4px; display:flex; align-items:center; gap:8px; }
+  header h1 { font-size: 26px; margin: 0 0 6px; }
   header p { margin: 0; color: var(--ink-soft); max-width: 60ch; }
   .card { background: var(--panel); border: 1px solid var(--line); padding: 20px; margin-bottom: 20px; }
   .card h2 { font-size: 17px; margin: 0 0 14px; }
-  .field-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
-  @media (max-width: 520px) { .field-grid { grid-template-columns: 1fr; } }
-  label { display:block; font-size:13px; color:var(--ink-soft); margin-bottom:4px; }
+  .card h3 { font-size: 14px; margin: 18px 0 10px; color: var(--ink-soft); }
+  .field-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  @media (max-width: 640px) { .field-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 420px) { .field-grid { grid-template-columns: 1fr; } }
+  label { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:4px; }
   input, textarea { width:100%; padding:9px 10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit; font-size:15px; }
   input:focus, textarea:focus { outline:2px solid var(--accent); outline-offset:1px; }
-  button { font:inherit; font-weight:600; cursor:pointer; border:none; padding:11px 18px; font-size:15px; }
+  button { font:inherit; font-weight:700; cursor:pointer; border:none; padding:11px 18px; font-size:15px; }
   .btn-primary { background: var(--ink); color: var(--panel); margin-top: 14px; }
   .btn-primary:hover { background: var(--accent); }
-  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); padding: 5px 10px; font-size: 13px; }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); padding: 6px 10px; font-size: 13px; font-weight:600; }
   .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+  .item-row { display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:end; }
+  @media (max-width: 560px) { .item-row { grid-template-columns: 1fr 1fr; } }
+  .item-row .mini-label { font-size:11px; color:var(--ink-soft); margin-bottom:2px; }
   table { width:100%; border-collapse: collapse; font-size:14px; }
-  th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); white-space: nowrap; }
-  th { color: var(--ink-soft); font-weight:600; font-size:12px; }
+  th, td { text-align:left; padding:8px 8px; border-bottom:1px solid var(--line); }
+  th { color: var(--ink-soft); font-weight:700; font-size:12px; }
   .table-scroll { overflow-x: auto; }
-  tr.best td { background: var(--good-bg); }
-  tr.best td:first-child { border-left: 3px solid var(--good); }
-  .tag-best { color: var(--good); font-weight:600; font-size:12px; }
   .empty { color: var(--ink-soft); font-size:14px; padding:8px 0; }
-  .insight { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; font-size:15px; }
   .hint { font-size:13px; color: var(--ink-soft); margin: 0 0 10px; }
-  .btn-whatsapp { display:inline-block; background:#2F6B3A; color:#fff; text-decoration:none; padding:6px 12px; font-size:13px; font-weight:600; margin-top:6px; }
+  .btn-whatsapp { display:inline-block; background:#2F6B3A; color:#fff; text-decoration:none; padding:6px 12px; font-size:13px; font-weight:700; margin-top:6px; }
   .btn-whatsapp:hover { background:#244F2C; }
+  .quote-card { border: 1px solid var(--line); padding: 16px; margin-bottom: 14px; }
+  .quote-card.best { border-color: var(--good); background: var(--good-bg); }
+  .quote-head { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .quote-head .provider { font-family:'Montserrat',sans-serif; font-weight:700; font-size:16px; }
+  .quote-head .total { font-family:'Montserrat',sans-serif; font-weight:700; font-size:20px; }
+  .tag-best { color: var(--good); font-weight:700; font-size:12px; display:block; }
+  .quote-meta { font-size:13px; color: var(--ink-soft); margin-bottom: 10px; }
   footer { color: var(--ink-soft); font-size:13px; margin-top:24px; text-align:center; }
 </style>
 </head>
@@ -60,43 +68,46 @@
 <div class="wrap">
   <a class="back" href="/">← Nexobra</a>
   <header>
-    <div class="brand" style="display:flex; align-items:center; gap:8px;"><img src="/icons/icon-192.png" alt="" width="18" height="18">NEXOBRA MERCADO</div>
+    <div class="brand"><img src="/icons/icon-192.png" alt="" width="18" height="18">NEXOBRA MERCADO</div>
     <h1>Comparador de cotizaciones</h1>
-    <p>Registra las cotizaciones de tus proveedores para un mismo material y encuentra la mejor opción considerando precio, IVA y transporte.</p>
+    <p>Registra la cotización completa de cada proveedor —con todos sus materiales— y compara el costo total real entre proveedores.</p>
   </header>
 
   <div class="card">
     <h2>Agregar cotización</h2>
     <div class="field-grid">
-      <div><label for="f-provider">Proveedor</label><input id="f-provider" type="text" placeholder="Ej: Cemex"></div>
-      <div><label for="f-material">Material</label><input id="f-material" type="text" placeholder="Ej: Cemento gris 50kg"></div>
-      <div><label for="f-qty">Cantidad</label><input id="f-qty" type="number" min="0" step="any" placeholder="500"></div>
-      <div><label for="f-price">Precio unitario ($)</label><input id="f-price" type="number" min="0" step="any" placeholder="28500"></div>
-      <div><label for="f-iva">IVA (%)</label><input id="f-iva" type="number" min="0" step="any" placeholder="19"></div>
-      <div><label for="f-transp">Transporte ($)</label><input id="f-transp" type="number" min="0" step="any" placeholder="350000"></div>
+      <div><label for="f-provider">Proveedor</label><input id="f-provider" type="text" placeholder="Ej: Homecenter"></div>
+      <div><label for="f-phone">WhatsApp / Teléfono</label><input id="f-phone" type="text" placeholder="Ej: 3001234567"></div>
       <div><label for="f-days">Tiempo de entrega (días)</label><input id="f-days" type="number" min="0" step="any" placeholder="5"></div>
       <div><label for="f-pago">Forma de pago</label><input id="f-pago" type="text" placeholder="Ej: 50% anticipo"></div>
-      <div><label for="f-phone">WhatsApp / Teléfono</label><input id="f-phone" type="text" placeholder="Ej: 3001234567"></div>
+      <div><label for="f-iva">IVA de la cotización (%)</label><input id="f-iva" type="number" min="0" step="any" placeholder="19"></div>
+      <div><label for="f-transp">Transporte total ($)</label><input id="f-transp" type="number" min="0" step="any" placeholder="350000"></div>
     </div>
-    <button class="btn-primary" onclick="addQuote()">Agregar a la comparación</button>
+
+    <h3>Materiales cotizados</h3>
+    <div id="items-container"></div>
+    <button class="btn-ghost" onclick="addItemRow()">+ Agregar ítem</button>
+
+    <div><button class="btn-primary" onclick="saveQuote()">Guardar cotización</button></div>
   </div>
 
   <div class="card">
     <h2>Pegar cotización con IA</h2>
-    <p class="hint">Pega el texto de un correo, un chat de WhatsApp, o lo que hayas transcrito de un PDF/imagen.</p>
-    <textarea id="f-paste" rows="4" placeholder="Ej: Te cotizamos 500 bultos de cemento a $28.500, IVA 19%, transporte $350.000, entrega 5 días, 50% anticipo. Tel 3001234567 - Ferretería El Tornillo"></textarea>
+    <p class="hint">Pega el texto de un correo, un chat de WhatsApp, o lo que hayas transcrito de un PDF/imagen — puede incluir varios materiales a la vez.</p>
+    <textarea id="f-paste" rows="4" placeholder="Ej: Homecenter cotiza: 100 tubos conduflex 1/2 a $1.200 c/u, 30 tomacorrientes sencillos a $8.500 c/u, 8 lámparas de 400w a $45.000 c/u. IVA 19%, transporte $80.000, entrega 5 días. Tel 3001234567"></textarea>
     <button class="btn-primary" onclick="extractQuote()">Extraer con IA</button>
     <p class="hint" id="extract-status"></p>
   </div>
 
   <div class="card">
-    <h2>Comparación</h2>
-    <div id="table-area" class="table-scroll"><p class="empty">Cargando…</p></div>
+    <h2>Comparación de cotizaciones</h2>
+    <div id="quotes-area"><p class="empty">Cargando…</p></div>
   </div>
 
-  <div class="card" id="insight-card" style="display:none;">
-    <h2>Recomendación</h2>
-    <p class="insight" id="insight-text"></p>
+  <div class="card" id="items-compare-card" style="display:none;">
+    <h2>Mejor precio por material (entre proveedores)</h2>
+    <p class="hint">Cuando dos o más proveedores cotizan el mismo material, aquí ves quién lo tiene más barato — útil si te conviene comprar mezclado.</p>
+    <div id="items-compare-area" class="table-scroll"></div>
   </div>
 
   <div class="card">
@@ -110,37 +121,62 @@
 <script>
 const API = '/api';
 
-function fmt(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(n); }
+function fmt(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(n || 0); }
+
+function addItemRow(values) {
+  const container = document.getElementById('items-container');
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = `
+    <div><div class="mini-label">Material</div><input class="it-material" type="text" placeholder="Ej: Tubo conduflex 1/2&quot;" value="${values && values.material ? values.material.replace(/"/g,'&quot;') : ''}"></div>
+    <div><div class="mini-label">Cantidad</div><input class="it-qty" type="number" min="0" step="any" placeholder="100" value="${values && values.qty != null ? values.qty : ''}"></div>
+    <div><div class="mini-label">Precio unitario ($)</div><input class="it-price" type="number" min="0" step="any" placeholder="1200" value="${values && values.price != null ? values.price : ''}"></div>
+    <button class="btn-ghost" onclick="this.closest('.item-row').remove()">Quitar</button>
+  `;
+  container.appendChild(row);
+}
+
+function resetItemRows() {
+  document.getElementById('items-container').innerHTML = '';
+  addItemRow();
+}
+
+function collectItems() {
+  return Array.from(document.querySelectorAll('#items-container .item-row')).map(row => ({
+    material: row.querySelector('.it-material').value.trim(),
+    qty: parseFloat(row.querySelector('.it-qty').value),
+    price: parseFloat(row.querySelector('.it-price').value)
+  })).filter(it => it.material && !isNaN(it.qty) && it.qty > 0 && !isNaN(it.price));
+}
 
 async function loadQuotes() {
   const res = await fetch(`${API}/quotes`);
   const quotes = await res.json();
   renderQuotes(quotes);
+  renderItemsCompare(quotes);
 }
 
 async function loadProviders() {
   const res = await fetch(`${API}/providers`);
-  const providers = await res.json();
-  renderProviders(providers);
+  renderProviders(await res.json());
 }
 
-async function addQuote() {
+async function saveQuote() {
+  const provider = document.getElementById('f-provider').value.trim();
+  const items = collectItems();
+
+  if (!provider) { alert('Escribe el nombre del proveedor.'); return; }
+  if (items.length === 0) { alert('Agrega al menos un ítem válido (material, cantidad y precio).'); return; }
+
   const body = {
-    provider: document.getElementById('f-provider').value.trim(),
-    material: document.getElementById('f-material').value.trim(),
-    qty: parseFloat(document.getElementById('f-qty').value),
-    price: parseFloat(document.getElementById('f-price').value),
-    iva: parseFloat(document.getElementById('f-iva').value) || 0,
-    transp: parseFloat(document.getElementById('f-transp').value) || 0,
+    provider,
+    phone: document.getElementById('f-phone').value.trim() || null,
     days: document.getElementById('f-days').value || null,
     pago: document.getElementById('f-pago').value.trim() || null,
-    phone: document.getElementById('f-phone').value.trim() || null
+    iva: parseFloat(document.getElementById('f-iva').value) || 0,
+    transp: parseFloat(document.getElementById('f-transp').value) || 0,
+    items
   };
-
-  if (!body.provider || !body.material || isNaN(body.qty) || isNaN(body.price)) {
-    alert('Completa al menos proveedor, material, cantidad y precio unitario.');
-    return;
-  }
 
   const res = await fetch(`${API}/quotes`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
@@ -152,10 +188,8 @@ async function addQuote() {
     return;
   }
 
-  ['f-provider','f-material','f-qty','f-price','f-iva','f-transp','f-days','f-pago','f-phone'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-
+  ['f-provider','f-phone','f-days','f-pago','f-iva','f-transp'].forEach(id => { document.getElementById(id).value = ''; });
+  resetItemRows();
   loadQuotes();
   loadProviders();
 }
@@ -168,51 +202,81 @@ async function removeQuote(id) {
 function whatsappLink(q) {
   const phone = (q.phone || '').replace(/\D/g, '');
   if (!phone) return null;
-  const msg = `Hola, confirmo el pedido de ${q.qty} ${q.material} a $${fmt(q.price)} c/u que nos cotizaste. ¿Cómo seguimos con la compra?`;
+  const resumen = q.items.map(it => `${it.qty} ${it.material}`).join(', ');
+  const msg = `Hola, confirmo el pedido de esta cotización (${resumen}) por un total de $${fmt(q.total)}. ¿Cómo seguimos con la compra?`;
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }
 
 function renderQuotes(quotes) {
-  const area = document.getElementById('table-area');
-  const insightCard = document.getElementById('insight-card');
-
+  const area = document.getElementById('quotes-area');
   if (quotes.length === 0) {
     area.innerHTML = '<p class="empty">Aún no hay cotizaciones registradas. Agrega al menos dos para comparar.</p>';
-    insightCard.style.display = 'none';
     return;
   }
 
   const minTotal = Math.min(...quotes.map(q => q.total));
-  let html = '<table><thead><tr><th>Proveedor</th><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>IVA</th><th>Transporte</th><th>Total</th><th>Entrega</th><th>Pago</th><th></th></tr></thead><tbody>';
+  let html = '';
 
   quotes.forEach(q => {
     const isBest = q.total === minTotal;
     const wa = whatsappLink(q);
-    html += `<tr class="${isBest ? 'best' : ''}">
-      <td>${q.provider}${isBest ? '<div class="tag-best">Mejor opción</div>' : ''}${isBest && wa ? `<a class="btn-whatsapp" href="${wa}" target="_blank" rel="noopener">Contactar por WhatsApp</a>` : ''}</td>
-      <td>${q.material}</td><td>${fmt(q.qty)}</td><td>$${fmt(q.price)}</td><td>$${fmt(q.ivaValue)}</td>
-      <td>$${fmt(q.transp)}</td><td><strong>$${fmt(q.total)}</strong></td>
-      <td>${q.days ? q.days + ' días' : '—'}</td><td>${q.pago || '—'}</td>
-      <td><button class="btn-ghost" onclick="removeQuote('${q.id}')">Quitar</button></td>
-    </tr>`;
+    let itemsHtml = '<table><thead><tr><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>';
+    q.items.forEach(it => {
+      itemsHtml += `<tr><td>${it.material}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.price)}</td><td>$${fmt(it.subtotal)}</td></tr>`;
+    });
+    itemsHtml += '</tbody></table>';
+
+    html += `<div class="quote-card ${isBest ? 'best' : ''}">
+      <div class="quote-head">
+        <div>
+          <div class="provider">${q.provider}</div>
+          ${isBest ? '<span class="tag-best">Mejor opción</span>' : ''}
+        </div>
+        <div class="total">$${fmt(q.total)}</div>
+      </div>
+      <div class="quote-meta">
+        IVA: $${fmt(q.ivaValue)} · Transporte: $${fmt(q.transp)} · Entrega: ${q.days ? q.days + ' días' : '—'} · Pago: ${q.pago || '—'}
+      </div>
+      <div class="table-scroll">${itemsHtml}</div>
+      ${isBest && wa ? `<a class="btn-whatsapp" href="${wa}" target="_blank" rel="noopener">Contactar por WhatsApp</a>` : ''}
+      <div style="margin-top:10px;"><button class="btn-ghost" onclick="removeQuote('${q.id}')">Quitar cotización</button></div>
+    </div>`;
+  });
+
+  area.innerHTML = html;
+}
+
+function renderItemsCompare(quotes) {
+  const card = document.getElementById('items-compare-card');
+  const area = document.getElementById('items-compare-area');
+  const byMaterial = {};
+
+  quotes.forEach(q => {
+    q.items.forEach(it => {
+      const key = it.material.trim().toLowerCase();
+      if (!byMaterial[key]) byMaterial[key] = [];
+      byMaterial[key].push({ provider: q.provider, price: it.price, material: it.material });
+    });
+  });
+
+  const withMultiple = Object.values(byMaterial).filter(list => {
+    const distinctProviders = new Set(list.map(x => x.provider));
+    return distinctProviders.size >= 2;
+  });
+
+  if (withMultiple.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+
+  let html = '<table><thead><tr><th>Material</th><th>Mejor precio</th><th>Proveedor</th></tr></thead><tbody>';
+  withMultiple.forEach(list => {
+    const best = list.reduce((a, b) => (b.price < a.price ? b : a));
+    html += `<tr><td>${best.material}</td><td>$${fmt(best.price)}</td><td>${best.provider}</td></tr>`;
   });
   html += '</tbody></table>';
   area.innerHTML = html;
-
-  if (quotes.length >= 2) {
-    const sorted = [...quotes].sort((a, b) => a.total - b.total);
-    const best = sorted[0], second = sorted[1];
-    const diff = second.total - best.total;
-    const diffPct = ((diff / second.total) * 100).toFixed(1);
-    let text = `<strong>${best.provider}</strong> ofrece el menor costo total ($${fmt(best.total)}) para ${best.material}, $${fmt(diff)} (${diffPct}%) menos que ${second.provider}, una vez incluidos IVA y transporte.`;
-    if (best.days && second.days && parseFloat(best.days) > parseFloat(second.days)) {
-      text += ` Sin embargo, ${second.provider} entrega en menos tiempo (${second.days} días frente a ${best.days}).`;
-    }
-    document.getElementById('insight-text').innerHTML = text;
-    insightCard.style.display = 'block';
-  } else {
-    insightCard.style.display = 'none';
-  }
+  card.style.display = 'block';
 }
 
 function renderProviders(providers) {
@@ -241,26 +305,28 @@ async function extractQuote() {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text })
     });
     const result = await res.json();
-    if (!res.ok) {
-      status.textContent = result.error || 'No se pudo leer la cotización.';
-      return;
-    }
+    if (!res.ok) { status.textContent = result.error || 'No se pudo leer la cotización.'; return; }
+
     if (result.provider) document.getElementById('f-provider').value = result.provider;
-    if (result.material) document.getElementById('f-material').value = result.material;
-    if (result.qty != null) document.getElementById('f-qty').value = result.qty;
-    if (result.price != null) document.getElementById('f-price').value = result.price;
-    if (result.iva != null) document.getElementById('f-iva').value = result.iva;
-    if (result.transp != null) document.getElementById('f-transp').value = result.transp;
+    if (result.phone) document.getElementById('f-phone').value = result.phone;
     if (result.days != null) document.getElementById('f-days').value = result.days;
     if (result.pago) document.getElementById('f-pago').value = result.pago;
-    if (result.phone) document.getElementById('f-phone').value = result.phone;
-    status.textContent = 'Listo — revisa los datos arriba antes de agregar.';
+    if (result.iva != null) document.getElementById('f-iva').value = result.iva;
+    if (result.transp != null) document.getElementById('f-transp').value = result.transp;
+
+    if (Array.isArray(result.items) && result.items.length > 0) {
+      document.getElementById('items-container').innerHTML = '';
+      result.items.forEach(it => addItemRow(it));
+    }
+
+    status.textContent = 'Listo — revisa los datos y los ítems antes de guardar.';
   } catch (e) {
     status.textContent = 'No se pudo leer la cotización. Intenta completar el formulario a mano.';
   }
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+resetItemRows();
 loadQuotes();
 loadProviders();
 </script>
