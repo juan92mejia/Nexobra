@@ -154,9 +154,62 @@
   .import-preview input[type="checkbox"] { width:auto; }
   #providers-area table input[type="text"] { min-width:130px; padding:6px 9px; font-size:13px; border-radius:6px; }
   footer { color: var(--ink-soft); font-size:13px; margin-top:28px; text-align:center; }
+  #auth-gate { position:fixed; inset:0; background:var(--bg); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+  #auth-gate .auth-box { max-width:440px; width:100%; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg); padding:28px; box-shadow:var(--shadow-pop); }
+  #auth-gate h1 { font-size:20px; margin:0 0 4px; }
+  #auth-gate .empresa-row { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:end; }
+  #auth-gate .empresa-row input { font-size:13.5px; }
+  #auth-error { color:var(--bad); font-size:13.5px; margin:8px 0 0; }
+  .top-session-bar { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:6px; font-size:13px; color:var(--ink-soft); flex-wrap:wrap; }
+  .top-session-bar strong { color:var(--ink); }
+  .top-session-bar select { width:auto; padding:6px 10px; font-size:13px; }
 </style>
 </head>
 <body>
+
+<div id="auth-gate" style="display:none;">
+  <div class="auth-box">
+    <div id="auth-setup-view">
+      <h1>Configura tu grupo empresarial</h1>
+      <p class="hint">Crea el usuario y contraseña con el que iniciará sesión tu grupo empresarial (ej. la matriz que agrupa varias constructoras). Dentro ya podrás cargar cada empresa/NIT del grupo — puedes agregar más después.</p>
+      <label for="as-grupo">Nombre del grupo empresarial</label>
+      <input id="as-grupo" type="text" placeholder="Ej: Grupo Empresarial">
+      <div class="field-grid" style="margin-top:10px;">
+        <div><label for="as-user">Usuario</label><input id="as-user" type="text" placeholder="Ej: grupo.admin"></div>
+        <div><label for="as-pass">Contraseña</label><input id="as-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
+      </div>
+      <h3>Empresas del grupo <span class="opt" style="text-transform:none; font-weight:400;">(opcional, puedes agregarlas después)</span></h3>
+      <div id="as-empresas-rows"></div>
+      <button class="btn-ghost btn-small" type="button" onclick="addSetupEmpresaRow()">+ Agregar empresa</button>
+      <div><button class="btn-primary" onclick="submitSetup()">Crear grupo empresarial e ingresar</button></div>
+      <p class="hint" style="margin-top:14px;">¿Tu grupo ya tiene usuario creado? <a href="#" onclick="showAuthLogin(); return false;" style="color:var(--accent); font-weight:700;">Inicia sesión</a></p>
+      <p id="auth-error"></p>
+    </div>
+    <div id="auth-login-view" style="display:none;">
+      <h1>Inicia sesión</h1>
+      <p class="hint">Usuario y contraseña de tu grupo empresarial.</p>
+      <div><label for="al-user">Usuario</label><input id="al-user" type="text"></div>
+      <div style="margin-top:10px;"><label for="al-pass">Contraseña</label><input id="al-pass" type="password"></div>
+      <div><button class="btn-primary" onclick="submitLogin()">Ingresar</button></div>
+      <p class="hint" style="margin-top:14px;">¿Necesitas vincular otro grupo empresarial ajeno a este, con su propio login? <a href="#" onclick="showAuthAddGroup(); return false;" style="color:var(--accent); font-weight:700;">Créalo aquí</a></p>
+      <p id="auth-error"></p>
+    </div>
+    <div id="auth-addgroup-view" style="display:none;">
+      <h1>Vincular otro grupo empresarial</h1>
+      <p class="hint">Crea un login totalmente independiente para otro grupo empresarial ajeno al actual (no comparte empresas, obras ni cotizaciones — solo el listado de proveedores de esta instalación de Nexobra).</p>
+      <label for="ag-grupo">Nombre del nuevo grupo empresarial</label>
+      <input id="ag-grupo" type="text">
+      <div class="field-grid" style="margin-top:10px;">
+        <div><label for="ag-user">Usuario</label><input id="ag-user" type="text"></div>
+        <div><label for="ag-pass">Contraseña</label><input id="ag-pass" type="password"></div>
+      </div>
+      <div><button class="btn-primary" onclick="submitAddGroup()">Crear grupo empresarial</button></div>
+      <p class="hint" style="margin-top:14px;"><a href="#" onclick="showAuthLogin(); return false;" style="color:var(--accent); font-weight:700;">← Volver a iniciar sesión</a></p>
+      <p id="auth-error"></p>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
   <a class="back" href="/">← Nexobra</a>
   <header>
@@ -165,7 +218,15 @@
     <p>Registra la cotización completa de cada proveedor — con todos sus materiales, disponibilidad, ciudad, condiciones de pago y retenciones colombianas — y compara el costo total real, con historial de cumplimiento y compra anticipada según tu presupuesto de obra.</p>
   </header>
 
+  <div class="top-session-bar" id="top-session-bar" style="display:none;">
+    <span>Grupo: <strong id="ts-group-name"></strong></span>
+    <span>Empresa activa:</span>
+    <select id="empresa-selector" onchange="setActiveEmpresa(this.value)"></select>
+    <a href="#" class="btn-ghost btn-small" onclick="logout(); return false;" style="text-decoration:none;">Cerrar sesión</a>
+  </div>
+
   <nav class="quicknav">
+    <a href="#card-empresas" id="quicknav-empresas" style="display:none;">Empresas del grupo</a>
     <a href="#card-presupuesto">Presupuesto</a>
     <a href="#card-buscar">Buscar mercado</a>
     <a href="#card-acuerdos">Acuerdos marco</a>
@@ -191,12 +252,26 @@
     <p class="hint" style="margin-top:6px;">Si lo marcas, se calcula la retefuente a practicar (2,5% declarante / 3,5% no declarante, sobre compras que superen 10 UVT ≈ $498.000 en 2025 — valor referencial). No aumenta tu costo: es dinero que igual pagas, solo que una parte va directo a la DIAN.</p>
 
     <h3>Datos de tu empresa</h3>
-    <p class="hint">Se usan para membretear tus órdenes de compra formales.</p>
+    <p class="hint">Se usan para membretear tus órdenes de compra formales cuando una cotización no tiene una empresa del grupo asignada. Si ya configuraste "Empresas del grupo empresarial", cada una usa su propio NIT y razón social en sus órdenes de compra.</p>
     <div class="field-grid">
       <div><label for="s-empresa-nombre">Razón social</label><input id="s-empresa-nombre" type="text" placeholder="Ej: Constructora Ejemplo S.A.S."></div>
       <div><label for="s-empresa-nit">NIT</label><input id="s-empresa-nit" type="text" placeholder="900.000.000-0"></div>
       <div><label for="s-empresa-direccion">Dirección</label><input id="s-empresa-direccion" type="text" placeholder="Cra 00 # 00-00, Ciudad"></div>
     </div>
+  </div>
+
+  <div class="card card-blue" id="card-empresas" style="display:none;">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg></span>Empresas del grupo empresarial</h2>
+    <p class="hint">Cada empresa tiene su propio NIT y razón social — se usan para membretar sus cotizaciones y órdenes de compra. Las obras, cotizaciones y presupuesto de cada empresa quedan separados entre sí, pero todas comparten el mismo listado de proveedores.</p>
+    <div class="field-grid">
+      <div><label for="e-nombre">Razón social</label><input id="e-nombre" type="text" placeholder="Ej: SAGITARIUS CONPANY SAS"></div>
+      <div><label for="e-nit">NIT</label><input id="e-nit" type="text" placeholder="900.000.000-0"></div>
+      <div><label for="e-direccion">Dirección</label><input id="e-direccion" type="text" placeholder="Cra 00 # 00-00, Ciudad"></div>
+    </div>
+    <button class="btn-primary" onclick="addEmpresa()">Agregar empresa</button>
+    <div id="empresas-area" style="margin-top:14px;"></div>
+    <h3>¿Otro grupo empresarial ajeno a este?</h3>
+    <p class="hint">Si necesitas un login totalmente independiente para otro grupo (no comparte tus empresas ni obras — solo el listado de proveedores), ciérra sesión y usa la opción "Vincular otro grupo empresarial" en la pantalla de inicio de sesión.</p>
   </div>
 
   <div class="card card-orange" id="card-obras">
@@ -322,7 +397,7 @@
     <div id="items-container"></div>
     <button class="btn-ghost" onclick="addItemRow()">+ Agregar ítem</button>
 
-    <div><button class="btn-primary" onclick="saveQuote()">Guardar cotización</button></div>
+    <div><button class="btn-primary" id="quote-save-btn" onclick="saveQuote()">Guardar cotización</button> <button class="btn-ghost" id="quote-cancel-edit-btn" style="display:none;" onclick="cancelEditQuote()">Cancelar edición</button></div>
   </div>
 
   <div class="card card-mix" id="card-pegar-ia">
@@ -379,13 +454,79 @@ function fmtPct(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigi
 let settings = { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8 };
 let quotesCache = [], providersCache = [], budgetCache = [], ordersInProgressCache = [], ordersCompletedCache = [], materialAliasesCache = [];
 
+/* ---------- Sesión (grupo empresarial) y empresa activa ---------- */
+// Nexobra puede usarse solo (sin login) o protegido por el login de un "grupo
+// empresarial" (ej. un holding) que agrupa varias empresas/NIT. apiFetch agrega el
+// token de sesión a cada llamada; si el servidor responde 401 (sesión vencida o
+// inválida), se muestra de nuevo la pantalla de inicio de sesión.
+
+let sessionToken = (function () { try { return localStorage.getItem('nexobra_session_token') || ''; } catch (e) { return ''; } })();
+let currentGroup = null;
+let empresasCache = [];
+let currentEmpresaId = (function () { try { return localStorage.getItem('nexobra_empresa_activa') || ''; } catch (e) { return ''; } })();
+
+async function apiFetch(url, opts) {
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers || {});
+  if (sessionToken) headers['X-Session-Token'] = sessionToken;
+  const res = await fetch(url, Object.assign({}, opts, { headers }));
+  if (res.status === 401) {
+    setSessionToken('');
+    showAuthGate();
+    throw new Error('sesion_invalida');
+  }
+  return res;
+}
+
+function setSessionToken(token) {
+  sessionToken = token || '';
+  try { if (token) localStorage.setItem('nexobra_session_token', token); else localStorage.removeItem('nexobra_session_token'); } catch (e) {}
+}
+
+function setActiveEmpresa(id) {
+  currentEmpresaId = id || '';
+  try { localStorage.setItem('nexobra_empresa_activa', currentEmpresaId); } catch (e) {}
+  const sel = document.getElementById('empresa-selector');
+  if (sel) sel.value = currentEmpresaId;
+  loadObras();
+  renderPresupuesto();
+  loadQuotes();
+}
+
+function empresaOptionsHTML(selectedId) {
+  return '<option value="">Sin empresa asignada</option>' + empresasCache.map(e => `<option value="${e.id}" ${e.id === selectedId ? 'selected' : ''}>${e.nombre}${e.nit ? ' — NIT ' + e.nit : ''}</option>`).join('');
+}
+
 /* ---------- Unificación de materiales equivalentes ---------- */
 // Cada proveedor nombra sus productos a su manera ("Válvula 2\" HD" vs "Válvula BR 2\" APOLO").
 // Sin esto el comparador los trata como productos distintos y nunca detecta que un proveedor
 // cubre el pedido completo. La unificación SIEMPRE la confirma una persona.
 
 function normalizeMaterialTextClient(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
-function materialTokens(s) { return normalizeMaterialTextClient(s).split(/\s+/).filter(Boolean); }
+
+// Marcas/fabricantes comunes en materiales de construcción en Colombia: se ignoran al
+// comparar nombres, para que el sistema reconozca el mismo artículo aunque cada
+// proveedor lo venda con una marca distinta (ej. "Tubo sanitario 2\" x 6m Pavco Wavin"
+// vs "Tubo sanitario 2\" x 6m Tubosa Coex" — mismo tubo, distinta marca).
+const BRAND_STOPWORDS = new Set([
+  'pavco','wavin','pavco wavin','tubosa','coex','apolo','acuatubos','celco','gerfor','durman',
+  'triton','colombit','eternit','argos','cemex','holcim','corona','alfa','incolma','hd','br',
+  'ph','pvc','marca'
+]);
+
+// Normaliza unidades pegadas al número ("6m" -> "6 m", "2mm" -> "2 mm") para que dos
+// nombres que difieren solo en ese espacio se sigan reconociendo como el mismo material,
+// y quita comillas/apóstrofes de pulgadas para no depender de qué símbolo usó cada quien.
+function normalizeUnitsClient(s) {
+  return s
+    .replace(/[""'']/g, '"')
+    .replace(/(\d)(mm|cm|kg|lts?|mts?|m)\b/g, '$1 $2');
+}
+
+function materialTokens(s) {
+  const norm = normalizeUnitsClient(normalizeMaterialTextClient(s));
+  return norm.split(/\s+/).filter(Boolean).filter(t => !BRAND_STOPWORDS.has(t));
+}
 
 function materialSimilarity(a, b) {
   const ta = new Set(materialTokens(a)), tb = new Set(materialTokens(b));
@@ -417,12 +558,12 @@ function dismissPair(a, b) {
 }
 function isPairDismissed(a, b) { return getDismissedPairs().includes(dismissPairKey(a, b)); }
 
-async function loadMaterialAliases() { materialAliasesCache = await (await fetch(`${API}/material-aliases`)).json(); }
+async function loadMaterialAliases() { materialAliasesCache = await (await apiFetch(`${API}/material-aliases`)).json(); }
 
 async function unifyMaterials(name1, name2, canonical) {
   const c = (canonical || name1 || '').trim();
   if (!c) return;
-  await fetch(`${API}/material-aliases`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ canonical: c, names: [name1, name2] }) });
+  await apiFetch(`${API}/material-aliases`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ canonical: c, names: [name1, name2] }) });
   await loadMaterialAliases();
   await loadQuotes();
   renderMaterialUnification();
@@ -438,7 +579,7 @@ function manualUnify() {
 }
 
 async function undoUnify(id) {
-  await fetch(`${API}/material-aliases/${id}`, { method: 'DELETE' });
+  await apiFetch(`${API}/material-aliases/${id}`, { method: 'DELETE' });
   await loadMaterialAliases();
   await loadQuotes();
   renderMaterialUnification();
@@ -512,7 +653,7 @@ function renderMaterialUnification() {
 /* ---------- Ajustes ---------- */
 
 async function loadSettings() {
-  settings = await (await fetch(`${API}/settings`)).json();
+  settings = await (await apiFetch(`${API}/settings`)).json();
   document.getElementById('s-capital').value = settings.costoCapitalAnual || '';
   document.getElementById('s-tolerancia').value = settings.tolerancia || '';
   document.getElementById('s-retenedor').checked = !!settings.esRetenedor;
@@ -525,7 +666,7 @@ async function loadSettings() {
 }
 
 async function saveSetting(field, value) {
-  settings = await (await fetch(`${API}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })).json();
+  settings = await (await apiFetch(`${API}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })).json();
   loadQuotes();
   renderPresupuesto();
 }
@@ -545,13 +686,22 @@ document.getElementById('s-empresa-direccion').addEventListener('change', e => s
 let obrasCache = [];
 let currentObraId = (function () { try { return localStorage.getItem('nexobra_obra_activa') || ''; } catch (e) { return ''; } })();
 
-function visibleQuotes() { return currentObraId ? quotesCache.filter(q => q.obraId === currentObraId) : quotesCache; }
-function visibleBudget() { return currentObraId ? budgetCache.filter(b => b.obraId === currentObraId) : budgetCache; }
+function obrasForActiveEmpresa() { return empresasCache.length === 0 ? obrasCache : obrasCache.filter(o => (o.empresaId || '') === (currentEmpresaId || '')); }
+function visibleQuotes() {
+  let list = empresasCache.length === 0 ? quotesCache : quotesCache.filter(q => (q.empresaId || '') === (currentEmpresaId || ''));
+  return currentObraId ? list.filter(q => q.obraId === currentObraId) : list;
+}
+function visibleBudget() {
+  let list = empresasCache.length === 0 ? budgetCache : budgetCache.filter(b => (b.empresaId || '') === (currentEmpresaId || ''));
+  return currentObraId ? list.filter(b => b.obraId === currentObraId) : list;
+}
 
 async function loadObras() {
-  obrasCache = await (await fetch(`${API}/obras`)).json();
+  obrasCache = await (await apiFetch(`${API}/obras`)).json();
   const sel = document.getElementById('obra-selector');
-  sel.innerHTML = '<option value="">Todas / General</option>' + obrasCache.map(o => `<option value="${o.id}">${o.nombre}</option>`).join('');
+  const list = obrasForActiveEmpresa();
+  sel.innerHTML = '<option value="">Todas / General</option>' + list.map(o => `<option value="${o.id}">${o.nombre}</option>`).join('');
+  if (!list.some(o => o.id === currentObraId)) currentObraId = '';
   sel.value = currentObraId || '';
   renderObrasArea();
 }
@@ -566,7 +716,7 @@ function setActiveObra(id) {
 async function addObra() {
   const nombre = document.getElementById('o-nombre').value.trim();
   if (!nombre) { alert('Escribe el nombre de la obra.'); return; }
-  const res = await fetch(`${API}/obras`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre }) });
+  const res = await apiFetch(`${API}/obras`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre, empresaId: currentEmpresaId || null }) });
   if (!res.ok) { const err = await res.json(); alert(err.error); return; }
   document.getElementById('o-nombre').value = '';
   await loadObras();
@@ -574,22 +724,23 @@ async function addObra() {
 
 async function removeObra(id) {
   if (!confirm('¿Quitar esta obra? Las cotizaciones y materiales de presupuesto que tenía asignados no se borran, solo quedan sin obra asignada.')) return;
-  await fetch(`${API}/obras/${id}`, { method: 'DELETE' });
+  await apiFetch(`${API}/obras/${id}`, { method: 'DELETE' });
   if (currentObraId === id) setActiveObra('');
   await loadObras();
 }
 
 function renderObrasArea() {
   const area = document.getElementById('obras-area');
-  if (obrasCache.length === 0) { area.innerHTML = ''; return; }
-  area.innerHTML = '<ul class="link-list">' + obrasCache.map(o => `<li><strong>${o.nombre}</strong> — <button class="btn-ghost btn-small" onclick="removeObra('${o.id}')">Quitar</button></li>`).join('') + '</ul>';
+  const list = obrasForActiveEmpresa();
+  if (list.length === 0) { area.innerHTML = ''; return; }
+  area.innerHTML = '<ul class="link-list">' + list.map(o => `<li><strong>${o.nombre}</strong> — <button class="btn-ghost btn-small" onclick="removeObra('${o.id}')">Quitar</button></li>`).join('') + '</ul>';
 }
 
 /* ---------- Acuerdos marco (compra contra convenios) ---------- */
 
 let agreementsCache = [];
 
-async function loadAgreements() { agreementsCache = await (await fetch(`${API}/agreements`)).json(); renderAgreements(); }
+async function loadAgreements() { agreementsCache = await (await apiFetch(`${API}/agreements`)).json(); renderAgreements(); }
 
 async function addAgreement() {
   const provider = document.getElementById('a-provider').value.trim();
@@ -598,7 +749,7 @@ async function addAgreement() {
   const iva = parseFloat(document.getElementById('a-iva').value) || 0;
   const vigenciaHasta = document.getElementById('a-vigencia').value;
   if (!provider || !material || isNaN(price) || price <= 0 || !vigenciaHasta) { alert('Completa proveedor, material, precio pactado y fecha de vigencia.'); return; }
-  const res = await fetch(`${API}/agreements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider, material, price, iva, vigenciaHasta }) });
+  const res = await apiFetch(`${API}/agreements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider, material, price, iva, vigenciaHasta, empresaId: currentEmpresaId || null }) });
   if (!res.ok) { const err = await res.json(); alert(err.error); return; }
   document.getElementById('a-provider').value = ''; document.getElementById('a-material').value = ''; document.getElementById('a-price').value = ''; document.getElementById('a-iva').value = ''; document.getElementById('a-vigencia').value = '';
   await loadAgreements();
@@ -606,22 +757,24 @@ async function addAgreement() {
 }
 
 async function removeAgreement(id) {
-  await fetch(`${API}/agreements/${id}`, { method: 'DELETE' });
+  await apiFetch(`${API}/agreements/${id}`, { method: 'DELETE' });
   await loadAgreements();
   renderQuotes(visibleQuotes());
 }
 
 function agreementsForKey(key) {
   const today = new Date().toISOString().slice(0, 10);
-  return agreementsCache.filter(a => canonicalMaterial(a.material).key === key && a.vigenciaHasta >= today);
+  const scoped = empresasCache.length === 0 ? agreementsCache : agreementsCache.filter(a => (a.empresaId || '') === (currentEmpresaId || ''));
+  return scoped.filter(a => canonicalMaterial(a.material).key === key && a.vigenciaHasta >= today);
 }
 
 function renderAgreements() {
   const area = document.getElementById('agreements-area');
-  if (agreementsCache.length === 0) { area.innerHTML = '<p class="empty">Aún no tienes acuerdos marco registrados.</p>'; return; }
+  const list = empresasCache.length === 0 ? agreementsCache : agreementsCache.filter(a => (a.empresaId || '') === (currentEmpresaId || ''));
+  if (list.length === 0) { area.innerHTML = '<p class="empty">Aún no tienes acuerdos marco registrados.</p>'; return; }
   const today = new Date();
   let html = '<div class="table-scroll"><table><thead><tr><th>Proveedor</th><th>Material</th><th>Precio pactado</th><th>Vigente hasta</th><th></th><th></th></tr></thead><tbody>';
-  agreementsCache.forEach(a => {
+  list.forEach(a => {
     const dias = Math.ceil((new Date(a.vigenciaHasta + 'T00:00:00') - today) / 86400000);
     const vencido = dias < 0;
     const porVencer = !vencido && dias <= 15;
@@ -636,13 +789,27 @@ function renderAgreements() {
 
 /* ---------- Orden de compra formal ---------- */
 
-function generarOrdenCompra(quoteId) {
+// Un solo botón hace las dos cosas: registra el pedido (con los materiales que estén
+// marcados en la cotización — completo si no se desmarcó nada) y abre el documento
+// de la orden de compra ya con esos mismos materiales y el total recalculado.
+async function generarOrdenCompra(quoteId) {
   const q = quotesCache.find(x => x.id === quoteId);
   if (!q) return;
+  const selected = getSelectedItemNames(quoteId);
+  const isPartial = selected.length > 0 && selected.length < q.items.length;
+  const res = await apiFetch(`${API}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId, items: isPartial ? selected : undefined }) });
+  if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+  loadOrdersInProgress(); renderPresupuesto();
+
+  const calc = calcSubset(q, selected);
   const prov = providersCache.find(p => p.name.toLowerCase() === q.provider.toLowerCase()) || {};
   const obra = obrasCache.find(o => o.id === q.obraId);
+  const empresa = empresasCache.find(e => e.id === q.empresaId);
   const fecha = new Date().toLocaleDateString('es-CO');
-  let itemsRows = q.items.map(it => `<tr><td>${it.material}</td><td style="text-align:right;">${fmt(it.qty)}</td><td style="text-align:right;">$${fmt(it.price)}</td><td style="text-align:right;">$${fmt(it.subtotal)}</td></tr>`).join('');
+  const itemsRows = calc.items.map(it => `<tr><td>${it.material}</td><td style="text-align:right;">${fmt(it.qty)}</td><td style="text-align:right;">$${fmt(it.price)}</td><td style="text-align:right;">$${fmt(it.qty * it.price)}</td></tr>`).join('');
+  const compradorNombre = empresa ? empresa.nombre : (settings.empresaNombre || '(razón social no configurada)');
+  const compradorNit = empresa ? empresa.nit : settings.empresaNit;
+  const compradorDireccion = empresa ? empresa.direccion : settings.empresaDireccion;
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Orden de compra — ${q.provider}</title>
   <style>
     body{font-family:Arial,sans-serif; color:#201F1B; padding:32px; max-width:760px; margin:0 auto;}
@@ -653,20 +820,22 @@ function generarOrdenCompra(quoteId) {
     th,td{border:1px solid #D8D3C6; padding:6px 10px;} th{background:#EAE7DE; text-align:left;}
     .total-row td{font-weight:bold; background:#F5F3ED;}
     .meta{font-size:13px; color:#57544C; margin-top:6px;}
+    .parcial-note{font-size:12.5px; color:#B4720A; margin-top:4px;}
     @media print { button{display:none;} }
   </style></head><body>
   <button onclick="window.print()" style="float:right; padding:8px 16px;">Imprimir / Guardar como PDF</button>
   <h1>Orden de compra</h1>
   <h2>${fecha}${obra ? ' · Obra: ' + obra.nombre : ''}</h2>
+  ${calc.isPartial ? `<p class="parcial-note">Pedido parcial: incluye ${calc.items.length} de los ${q.items.length} materiales de la cotización original.</p>` : ''}
   <div class="cols">
-    <div class="box"><strong>Comprador</strong><br>${settings.empresaNombre || '(razón social no configurada)'}<br>${settings.empresaNit ? 'NIT ' + settings.empresaNit : ''}<br>${settings.empresaDireccion || ''}</div>
+    <div class="box"><strong>Comprador</strong><br>${compradorNombre}<br>${compradorNit ? 'NIT ' + compradorNit : ''}<br>${compradorDireccion || ''}</div>
     <div class="box"><strong>Proveedor</strong><br>${q.provider}<br>${prov.nit ? 'NIT ' + prov.nit : ''}<br>${prov.direccion || ''}<br>${q.phone || prov.phone || ''}</div>
   </div>
   <table><thead><tr><th>Material</th><th style="text-align:right;">Cant.</th><th style="text-align:right;">Precio unit.</th><th style="text-align:right;">Subtotal</th></tr></thead><tbody>
   ${itemsRows}
-  <tr><td colspan="3">IVA</td><td style="text-align:right;">$${fmt(q.ivaValue)}</td></tr>
-  <tr><td colspan="3">Transporte</td><td style="text-align:right;">$${fmt(q.transp)}</td></tr>
-  <tr class="total-row"><td colspan="3">Total</td><td style="text-align:right;">$${fmt(q.total)}</td></tr>
+  <tr><td colspan="3">IVA</td><td style="text-align:right;">$${fmt(calc.ivaValue)}</td></tr>
+  <tr><td colspan="3">Transporte</td><td style="text-align:right;">$${fmt(calc.transp)}</td></tr>
+  <tr class="total-row"><td colspan="3">Total</td><td style="text-align:right;">$${fmt(calc.total)}</td></tr>
   </tbody></table>
   <p class="meta">Ciudad de despacho: ${q.city || '—'} · Plazo de entrega: ${q.days ? q.days + ' días' : '—'} · Condiciones de pago: ${q.pago || '—'}${q.anticipoPct ? ' (' + q.anticipoPct + '% anticipo)' : ''}</p>
   </body></html>`;
@@ -678,20 +847,20 @@ function generarOrdenCompra(quoteId) {
 
 /* ---------- Presupuesto de obra ---------- */
 
-async function loadBudget() { budgetCache = await (await fetch(`${API}/budget`)).json(); renderPresupuesto(); }
+async function loadBudget() { budgetCache = await (await apiFetch(`${API}/budget`)).json(); renderPresupuesto(); }
 
 async function addBudgetItem() {
   const material = document.getElementById('b-material').value.trim();
   const unidad = document.getElementById('b-unidad').value.trim();
   const cantidadTotal = parseFloat(document.getElementById('b-cantidad').value);
   if (!material || isNaN(cantidadTotal) || cantidadTotal <= 0) { alert('Completa material y una cantidad total mayor a 0.'); return; }
-  const res = await fetch(`${API}/budget`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, unidad, cantidadTotal, obraId: currentObraId || null }) });
+  const res = await apiFetch(`${API}/budget`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, unidad, cantidadTotal, obraId: currentObraId || null, empresaId: currentEmpresaId || null }) });
   if (!res.ok) { const err = await res.json(); alert(err.error); return; }
   document.getElementById('b-material').value = ''; document.getElementById('b-unidad').value = ''; document.getElementById('b-cantidad').value = '';
   loadBudget();
 }
 
-async function removeBudgetItem(id) { await fetch(`${API}/budget/${id}`, { method: 'DELETE' }); loadBudget(); }
+async function removeBudgetItem(id) { await apiFetch(`${API}/budget/${id}`, { method: 'DELETE' }); loadBudget(); }
 
 function useMaterialInQuote(material) {
   addItemRow({ material });
@@ -824,7 +993,7 @@ async function parsePdfFile(file) {
   for (let i = 0; i < chunks.length; i++) {
     status.textContent = `Interpretando presupuesto con IA... parte ${i + 1}/${chunks.length}`;
     try {
-      const res = await fetch(`${API}/ai/budget-extract`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: chunks[i] }) });
+      const res = await apiFetch(`${API}/ai/budget-extract`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: chunks[i] }) });
       if (!res.ok) { if (res.status === 501) { document.getElementById('f-import-paste').value = fullText.slice(0, 5000); status.textContent = 'Se extrajo el texto pero la interpretación con IA no está configurada en el servidor (falta ANTHROPIC_API_KEY) — revisa el texto abajo.'; return []; } continue; }
       const data = await res.json();
       (data.items || []).forEach(it => {
@@ -901,7 +1070,7 @@ async function confirmImport() {
     const cantidad = parseFloat(document.getElementById('imp-cant-' + i).value);
     if (material && !isNaN(cantidad) && cantidad > 0) items.push({ material, unidad, cantidad });
   });
-  const res = await fetch(`${API}/budget/bulk`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items, obraId: currentObraId || null }) });
+  const res = await apiFetch(`${API}/budget/bulk`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items, obraId: currentObraId || null, empresaId: currentEmpresaId || null }) });
   const data = await res.json();
   importPreview = []; document.getElementById('import-preview-area').innerHTML = '';
   document.getElementById('import-status').textContent = `${data.count} materiales importados al presupuesto de obra.`;
@@ -936,7 +1105,7 @@ async function suggestManufacturers() {
   if (!material) { alert('Escribe el material que buscas.'); return; }
   area.innerHTML = '<p class="hint">Consultando...</p>';
   try {
-    const res = await fetch(`${API}/ai/manufacturers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, city }) });
+    const res = await apiFetch(`${API}/ai/manufacturers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, city }) });
     const data = await res.json();
     if (!res.ok) { area.innerHTML = `<p class="hint">${data.error || 'No disponible.'}</p>`; return; }
     if (!data.names || !data.names.length) { area.innerHTML = '<p class="hint">La IA no tiene suficiente confianza para sugerir fabricantes de este material — usa los enlaces de búsqueda de arriba.</p>'; return; }
@@ -962,7 +1131,7 @@ async function suggestReteica() {
   if (!city) { alert('Escribe primero la ciudad de despacho.'); return; }
   area.innerHTML = '<p class="hint">Consultando...</p>';
   try {
-    const res = await fetch(`${API}/ai/reteica`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ city }) });
+    const res = await apiFetch(`${API}/ai/reteica`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ city }) });
     const data = await res.json();
     if (!res.ok) { area.innerHTML = `<p class="hint">${data.error || 'No disponible.'}</p>`; return; }
     if (data.rango) area.innerHTML = `<p class="insight insight-info"><strong>Referencia para ${city}:</strong> ${data.rango}.</p><p class="ai-disclaimer">${data.nota || 'Solo referencial — confírmalo con tu proveedor o la Secretaría de Hacienda municipal.'} No se autocompletó el campo.</p>`;
@@ -1017,14 +1186,56 @@ function collectItems() {
 /* ---------- Cotizaciones ---------- */
 
 async function loadQuotes() {
-  quotesCache = await (await fetch(`${API}/quotes`)).json();
+  quotesCache = await (await apiFetch(`${API}/quotes`)).json();
   renderQuotes(visibleQuotes());
   renderMaterialUnification();
 }
 
-async function loadProviders() { providersCache = await (await fetch(`${API}/providers`)).json(); renderProviders(providersCache); }
-async function loadOrdersInProgress() { ordersInProgressCache = await (await fetch(`${API}/orders/in-progress`)).json(); renderPedidos(); }
-async function loadOrdersCompleted() { ordersCompletedCache = await (await fetch(`${API}/orders/completed`)).json(); }
+async function loadProviders() { providersCache = await (await apiFetch(`${API}/providers`)).json(); renderProviders(providersCache); }
+async function loadOrdersInProgress() { ordersInProgressCache = await (await apiFetch(`${API}/orders/in-progress`)).json(); renderPedidos(); }
+async function loadOrdersCompleted() { ordersCompletedCache = await (await apiFetch(`${API}/orders/completed`)).json(); }
+
+/* ---------- Editar cotización ---------- */
+// El mismo formulario de "Agregar cotización" sirve para editar: al hacer clic en
+// "Editar" se precargan sus datos y saveQuote() hace PUT en vez de POST. La cotización
+// puede editarse por completo: datos básicos, pago/condiciones, garantía técnica y
+// los materiales cotizados (agregar/quitar ítems).
+
+let editingQuoteId = null;
+
+function editQuote(id) {
+  const q = quotesCache.find(x => x.id === id);
+  if (!q) return;
+  editingQuoteId = id;
+  document.getElementById('f-provider').value = q.provider || '';
+  document.getElementById('f-phone').value = q.phone || '';
+  document.getElementById('f-days').value = q.days || '';
+  document.getElementById('f-pago').value = q.pago || '';
+  document.getElementById('f-iva').value = q.iva || '';
+  document.getElementById('f-transp').value = q.transp || '';
+  document.getElementById('f-city').value = q.city || '';
+  document.getElementById('f-anticipo').value = q.anticipoPct || '';
+  document.getElementById('f-declarante').value = q.declarante === 'no' ? 'no' : 'si';
+  document.getElementById('f-reteica').value = q.reteicaPct || '';
+  setGarantiaFields(q.garantiaPct, q.garantiaDias);
+  document.getElementById('items-container').innerHTML = '';
+  (q.items || []).forEach(it => addItemRow(it));
+  const btn = document.getElementById('quote-save-btn');
+  btn.textContent = 'Actualizar cotización';
+  document.getElementById('quote-cancel-edit-btn').style.display = 'inline-block';
+  document.getElementById('card-agregar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelEditQuote() {
+  editingQuoteId = null;
+  document.getElementById('quote-save-btn').textContent = 'Guardar cotización';
+  document.getElementById('quote-cancel-edit-btn').style.display = 'none';
+  ['f-provider','f-phone','f-days','f-pago','f-iva','f-transp','f-city','f-anticipo','f-reteica'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('f-declarante').value = 'si';
+  document.getElementById('f-garantia-riesgo').value = '0'; document.getElementById('f-garantia-dias-select').value = '0';
+  toggleGarantiaCustom(); toggleGarantiaDiasCustom();
+  resetItemRows();
+}
 
 async function saveQuote() {
   const provider = document.getElementById('f-provider').value.trim();
@@ -1049,12 +1260,19 @@ async function saveQuote() {
     declarante: document.getElementById('f-declarante').value,
     reteicaPct: parseFloat(document.getElementById('f-reteica').value) || 0,
     garantiaPct, garantiaDias, items,
-    obraId: currentObraId || null
+    obraId: currentObraId || null,
+    empresaId: currentEmpresaId || null
   };
 
-  const res = await fetch(`${API}/quotes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const isEdit = !!editingQuoteId;
+  const url = isEdit ? `${API}/quotes/${editingQuoteId}` : `${API}/quotes`;
+  const method = isEdit ? 'PUT' : 'POST';
+  const res = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) { const err = await res.json(); alert(err.error || 'No se pudo guardar la cotización.'); return; }
 
+  editingQuoteId = null;
+  document.getElementById('quote-save-btn').textContent = 'Guardar cotización';
+  document.getElementById('quote-cancel-edit-btn').style.display = 'none';
   ['f-provider','f-phone','f-days','f-pago','f-iva','f-transp','f-city','f-anticipo','f-reteica'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('f-declarante').value = 'si';
   document.getElementById('f-garantia-riesgo').value = '0'; document.getElementById('f-garantia-dias-select').value = '0';
@@ -1064,20 +1282,76 @@ async function saveQuote() {
   loadQuotes(); loadProviders(); renderPresupuesto();
 }
 
-async function removeQuote(id) { await fetch(`${API}/quotes/${id}`, { method: 'DELETE' }); loadQuotes(); }
+async function removeQuote(id) { await apiFetch(`${API}/quotes/${id}`, { method: 'DELETE' }); loadQuotes(); }
 
-async function markAsOrdered(quoteId) {
-  const res = await fetch(`${API}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId }) });
-  if (!res.ok) { const err = await res.json(); alert(err.error); return; }
-  loadOrdersInProgress(); renderPresupuesto();
+/* ---------- Selección parcial de materiales a pedir ---------- */
+// No siempre se termina comprando el pedido completo de una cotización. Estas
+// casillas dejan elegir qué materiales sí se van a pedir, recalculan el total solo
+// con esos ítems, y así generan la orden de compra / el mensaje de WhatsApp / el
+// pedido — todo sin tocar la cotización original, que queda intacta como referencia.
+
+const UVT_2025_CLIENT = 49799;
+const RETEFUENTE_BASE_UVT_CLIENT = 10;
+
+function getSelectedItemNames(quoteId) {
+  const q = quotesCache.find(x => x.id === quoteId);
+  if (!q) return [];
+  const boxes = document.querySelectorAll(`.sel-item-${cssEscape(quoteId)}`);
+  if (boxes.length === 0) return q.items.map(it => it.material);
+  const selected = Array.from(boxes).filter(b => b.checked).map(b => b.dataset.material);
+  return selected.length > 0 ? selected : q.items.map(it => it.material);
 }
 
-function whatsappLink(q) {
+function cssEscape(s) { return String(s).replace(/[^a-zA-Z0-9_-]/g, '_'); }
+
+// Recalcula subtotal/IVA/retenciones/total igual que el servidor, pero solo para los
+// materiales seleccionados — sin modificar la cotización guardada.
+function calcSubset(q, selectedNames) {
+  const wanted = new Set(selectedNames.map(normalizeMaterialTextClient));
+  const items = q.items.filter(it => wanted.has(normalizeMaterialTextClient(it.material)));
+  const useItems = items.length > 0 ? items : q.items;
+  const subtotalItems = useItems.reduce((s, it) => s + it.qty * it.price, 0);
+  const ivaValue = subtotalItems * ((q.iva || 0) / 100);
+  const anticipoMonto = subtotalItems * ((q.anticipoPct || 0) / 100);
+  const days = Number(q.days) || 0;
+  const financeCost = anticipoMonto * ((settings.costoCapitalAnual || 0) / 100) * (days / 365);
+  const transp = Number(q.transp) || 0;
+  const total = subtotalItems + ivaValue + transp + financeCost;
+  const superaBase = subtotalItems >= (UVT_2025_CLIENT * RETEFUENTE_BASE_UVT_CLIENT);
+  const retefuentePct = q.declarante === 'no' ? 3.5 : 2.5;
+  const retefuenteMonto = (settings.esRetenedor && superaBase) ? subtotalItems * (retefuentePct / 100) : 0;
+  const reteicaMonto = subtotalItems * ((q.reteicaPct || 0) / 100);
+  const garantiaMonto = total * ((q.garantiaPct || 0) / 100);
+  const netoInmediatoProveedor = total - retefuenteMonto - reteicaMonto - garantiaMonto;
+  return { items: useItems, isPartial: items.length > 0 && items.length < q.items.length, subtotalItems, ivaValue, transp, total, retefuenteMonto, reteicaMonto, garantiaMonto, netoInmediatoProveedor };
+}
+
+function recalcSelectedTotal(quoteId) {
+  const q = quotesCache.find(x => x.id === quoteId);
+  if (!q) return;
+  const selected = getSelectedItemNames(quoteId);
+  const calc = calcSubset(q, selected);
+  const box = document.getElementById(`sel-summary-${cssEscape(quoteId)}`);
+  if (!box) return;
+  if (!calc.isPartial) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="insight insight-info" style="margin-top:10px;">Seleccionaste ${calc.items.length} de ${q.items.length} materiales — total recalculado solo con esos: <strong>$${fmt(calc.total)}</strong> (el resto de la cotización queda igual, sin tocarla).</div>`;
+}
+
+function whatsappMessageFor(q, selectedNames) {
+  const calc = calcSubset(q, selectedNames || q.items.map(it => it.material));
+  const resumen = calc.items.map(it => `${it.qty} ${it.material}`).join(', ');
+  const nota = calc.isPartial ? ' (pedido parcial de la cotización)' : '';
+  return `Hola, confirmo el pedido${nota} de esta cotización (${resumen}) por un total de $${fmt(calc.total)}. ¿Cómo seguimos con la compra?`;
+}
+
+function openWhatsApp(quoteId) {
+  const q = quotesCache.find(x => x.id === quoteId);
+  if (!q) return;
   const phone = (q.phone || '').replace(/\D/g, '');
-  if (!phone) return null;
-  const resumen = q.items.map(it => `${it.qty} ${it.material}`).join(', ');
-  const msg = `Hola, confirmo el pedido de esta cotización (${resumen}) por un total de $${fmt(q.total)}. ¿Cómo seguimos con la compra?`;
-  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  if (!phone) { alert('Esta cotización no tiene un número de WhatsApp registrado.'); return; }
+  const selected = getSelectedItemNames(quoteId);
+  const msg = whatsappMessageFor(q, selected);
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
 }
 
 function reliabilityBadgeFor(name) {
@@ -1123,11 +1397,12 @@ function renderQuotes(quotes) {
 
   quotes.forEach(q => {
     const isBest = q.total === minTotal;
-    const wa = whatsappLink(q);
-    let itemsHtml = '<table><thead><tr><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>Disponibilidad</th><th>Subtotal</th></tr></thead><tbody>';
+    const hasWa = !!(q.phone || '').replace(/\D/g, '');
+    const safeId = cssEscape(q.id);
+    let itemsHtml = `<table><thead><tr><th><input type="checkbox" checked title="Marca/desmarca todos" onchange="document.querySelectorAll('.sel-item-${safeId}').forEach(b=>b.checked=this.checked); recalcSelectedTotal('${q.id}')"></th><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>Disponibilidad</th><th>Subtotal</th></tr></thead><tbody>`;
     q.items.forEach(it => {
       const stockTag = it.disponible >= it.qty ? '<span class="tag-best">Stock completo</span>' : (it.disponible > 0 ? `<span class="tag-partial">Parcial: ${fmt(it.disponible)}/${fmt(it.qty)}</span>` : '<span class="tag-nostock">Sin stock</span>');
-      itemsHtml += `<tr><td>${it.material}${leadTimeWarning(it.material, q.days)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.price)}${priceTrendHTML(it.material, it.price)}</td><td>${stockTag}</td><td>$${fmt(it.subtotal)}</td></tr>`;
+      itemsHtml += `<tr><td><input type="checkbox" class="sel-item-${safeId}" data-material="${it.material.replace(/"/g, '&quot;')}" checked onchange="recalcSelectedTotal('${q.id}')"></td><td>${it.material}${leadTimeWarning(it.material, q.days)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.price)}${priceTrendHTML(it.material, it.price)}</td><td>${stockTag}</td><td>$${fmt(it.subtotal)}</td></tr>`;
     });
     itemsHtml += '</tbody></table>';
 
@@ -1145,12 +1420,14 @@ function renderQuotes(quotes) {
         <div class="total">$${fmt(q.total)}</div>
       </div>
       <div class="quote-meta">IVA: $${fmt(q.ivaValue)} · Transporte: $${fmt(q.transp)} · Ciudad: ${q.city || '—'} · Entrega: ${q.days ? q.days + ' días' : '—'} · Pago: ${q.pago || '—'}${q.anticipoPct ? ' (' + q.anticipoPct + '% anticipo)' : ''}</div>
+      <p class="hint" style="margin:0 0 6px;">Desmarca los materiales que al final NO vas a pedir de esta cotización — el total, la orden de compra y el mensaje de WhatsApp se recalculan solo con los que dejes marcados, sin tocar esta cotización.</p>
       <div class="table-scroll">${itemsHtml}</div>
+      <div id="sel-summary-${safeId}"></div>
       ${retencionesHtml}
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-        ${wa ? `<a class="btn-whatsapp" href="${wa}" target="_blank" rel="noopener">Contactar por WhatsApp</a>` : ''}
+        ${hasWa ? `<button class="btn-whatsapp" style="border:none;" onclick="openWhatsApp('${q.id}')">Contactar por WhatsApp</button>` : ''}
         <button class="btn-ghost" onclick="generarOrdenCompra('${q.id}')">Generar orden de compra</button>
-        <button class="btn-ghost" onclick="markAsOrdered('${q.id}')">Marcar pedido realizado</button>
+        <button class="btn-ghost" onclick="editQuote('${q.id}')">Editar cotización</button>
         <button class="btn-ghost" onclick="removeQuote('${q.id}')">Quitar cotización</button>
       </div>
     </div>`;
@@ -1338,7 +1615,7 @@ function renderPedidos() {
 async function registrarResultado(id) {
   const onTime = document.getElementById('ot-' + id).value === 'si';
   const quality = document.getElementById('q-' + id).value;
-  await fetch(`${API}/orders/${id}/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ onTime, quality }) });
+  await apiFetch(`${API}/orders/${id}/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ onTime, quality }) });
   await Promise.all([loadOrdersInProgress(), loadOrdersCompleted(), loadProviders()]);
   loadQuotes(); renderPresupuesto();
 }
@@ -1346,7 +1623,7 @@ async function registrarResultado(id) {
 /* ---------- Proveedores ---------- */
 
 async function saveProviderMeta(id, field, value) {
-  await fetch(`${API}/providers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) });
+  await apiFetch(`${API}/providers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) });
 }
 
 function renderProviders(providers) {
@@ -1378,7 +1655,7 @@ async function extractQuote() {
   if (!text) { status.textContent = 'Pega primero el texto de la cotización.'; return; }
   status.textContent = 'Leyendo la cotización...';
   try {
-    const res = await fetch(`${API}/extract`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    const res = await apiFetch(`${API}/extract`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
     const result = await res.json();
     if (!res.ok) { status.textContent = result.error || 'No se pudo leer la cotización.'; return; }
 
@@ -1402,6 +1679,176 @@ async function extractQuote() {
   } catch (e) { status.textContent = 'No se pudo leer la cotización. Intenta completar el formulario a mano.'; }
 }
 
+/* ---------- Autenticación (grupo empresarial) ---------- */
+// Si nadie ha creado un grupo empresarial todavía, la app arranca directo (modo
+// simple). En cuanto existe uno, se exige iniciar sesión — el login es del GRUPO
+// (ej. la matriz "Grupo Empresarial"); dentro de esa sesión se elige con cuál de sus
+// empresas se está trabajando en cada momento.
+
+function showAuthGate() {
+  document.getElementById('auth-gate').style.display = 'flex';
+  document.getElementById('auth-error').textContent = '';
+}
+function hideAuthGate() { document.getElementById('auth-gate').style.display = 'none'; }
+
+function showAuthSetupView() {
+  document.getElementById('auth-setup-view').style.display = 'block';
+  document.getElementById('auth-login-view').style.display = 'none';
+  document.getElementById('auth-addgroup-view').style.display = 'none';
+  if (!document.getElementById('as-empresas-rows').children.length) {
+    addSetupEmpresaRow(); addSetupEmpresaRow();
+  }
+}
+function showAuthLogin() {
+  document.getElementById('auth-setup-view').style.display = 'none';
+  document.getElementById('auth-login-view').style.display = 'block';
+  document.getElementById('auth-addgroup-view').style.display = 'none';
+  document.getElementById('auth-error').textContent = '';
+}
+function showAuthAddGroup() {
+  document.getElementById('auth-setup-view').style.display = 'none';
+  document.getElementById('auth-login-view').style.display = 'none';
+  document.getElementById('auth-addgroup-view').style.display = 'block';
+  document.getElementById('auth-error').textContent = '';
+}
+
+function addSetupEmpresaRow(nombre) {
+  const wrap = document.getElementById('as-empresas-rows');
+  const row = document.createElement('div');
+  row.className = 'empresa-row';
+  row.innerHTML = `
+    <input class="as-emp-nombre" type="text" placeholder="Razón social" value="${nombre ? nombre.replace(/"/g, '&quot;') : ''}">
+    <input class="as-emp-nit" type="text" placeholder="NIT (opcional)">
+    <button type="button" class="btn-ghost btn-small" onclick="this.closest('.empresa-row').remove()">Quitar</button>`;
+  wrap.appendChild(row);
+}
+
+async function submitSetup() {
+  const groupNombre = document.getElementById('as-grupo').value.trim();
+  const username = document.getElementById('as-user').value.trim();
+  const password = document.getElementById('as-pass').value;
+  const empresas = Array.from(document.querySelectorAll('#as-empresas-rows .empresa-row')).map(row => ({
+    nombre: row.querySelector('.as-emp-nombre').value.trim(),
+    nit: row.querySelector('.as-emp-nit').value.trim()
+  })).filter(e => e.nombre);
+  const err = document.getElementById('auth-error');
+  if (!groupNombre || !username || !password) { err.textContent = 'Completa el nombre del grupo, usuario y contraseña.'; return; }
+  const res = await fetch(`${API}/auth/setup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupNombre, username, password, empresas }) });
+  const data = await res.json();
+  if (!res.ok) { err.textContent = data.error || 'No se pudo crear el grupo empresarial.'; return; }
+  setSessionToken(data.token);
+  currentGroup = data.group;
+  empresasCache = data.empresas || [];
+  hideAuthGate();
+  await afterLogin();
+}
+
+async function submitLogin() {
+  const username = document.getElementById('al-user').value.trim();
+  const password = document.getElementById('al-pass').value;
+  const err = document.getElementById('auth-error');
+  if (!username || !password) { err.textContent = 'Escribe usuario y contraseña.'; return; }
+  const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+  const data = await res.json();
+  if (!res.ok) { err.textContent = data.error || 'No se pudo iniciar sesión.'; return; }
+  setSessionToken(data.token);
+  currentGroup = data.group;
+  empresasCache = data.empresas || [];
+  hideAuthGate();
+  await afterLogin();
+}
+
+async function submitAddGroup() {
+  const groupNombre = document.getElementById('ag-grupo').value.trim();
+  const username = document.getElementById('ag-user').value.trim();
+  const password = document.getElementById('ag-pass').value;
+  const err = document.getElementById('auth-error');
+  if (!groupNombre || !username || !password) { err.textContent = 'Completa el nombre del grupo, usuario y contraseña.'; return; }
+  const res = await fetch(`${API}/auth/groups`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupNombre, username, password }) });
+  const data = await res.json();
+  if (!res.ok) { err.textContent = data.error || 'No se pudo crear el grupo empresarial.'; return; }
+  err.style.color = 'var(--good)';
+  err.textContent = `Grupo "${data.group.nombre}" creado. Ya puedes iniciar sesión con su usuario y contraseña.`;
+  setTimeout(() => { err.style.color = ''; showAuthLogin(); }, 1800);
+}
+
+async function logout() {
+  if (sessionToken) { try { await apiFetch(`${API}/auth/logout`, { method: 'POST' }); } catch (e) {} }
+  setSessionToken('');
+  currentGroup = null;
+  empresasCache = [];
+  currentEmpresaId = '';
+  try { localStorage.removeItem('nexobra_empresa_activa'); } catch (e) {}
+  location.reload();
+}
+
+function updateSessionUI() {
+  const bar = document.getElementById('top-session-bar');
+  const quicknavEmpresas = document.getElementById('quicknav-empresas');
+  const cardEmpresas = document.getElementById('card-empresas');
+  if (currentGroup) {
+    bar.style.display = 'flex';
+    document.getElementById('ts-group-name').textContent = currentGroup.nombre;
+    quicknavEmpresas.style.display = 'inline-block';
+    cardEmpresas.style.display = 'block';
+    const sel = document.getElementById('empresa-selector');
+    sel.innerHTML = empresaOptionsHTML(currentEmpresaId);
+    if (!empresasCache.some(e => e.id === currentEmpresaId)) currentEmpresaId = empresasCache[0] ? empresasCache[0].id : '';
+    sel.value = currentEmpresaId;
+    try { localStorage.setItem('nexobra_empresa_activa', currentEmpresaId); } catch (e) {}
+  } else {
+    bar.style.display = 'none';
+    quicknavEmpresas.style.display = 'none';
+    cardEmpresas.style.display = 'none';
+  }
+  renderEmpresasArea();
+}
+
+/* ---------- Empresas dentro del grupo empresarial ---------- */
+
+async function loadEmpresas() {
+  if (!currentGroup) return;
+  const res = await apiFetch(`${API}/me`);
+  const data = await res.json();
+  empresasCache = data.empresas || [];
+  updateSessionUI();
+}
+
+async function addEmpresa() {
+  const nombre = document.getElementById('e-nombre').value.trim();
+  const nit = document.getElementById('e-nit').value.trim();
+  const direccion = document.getElementById('e-direccion').value.trim();
+  if (!nombre) { alert('Escribe la razón social de la empresa.'); return; }
+  const res = await apiFetch(`${API}/empresas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre, nit, direccion }) });
+  if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+  document.getElementById('e-nombre').value = ''; document.getElementById('e-nit').value = ''; document.getElementById('e-direccion').value = '';
+  await loadEmpresas();
+}
+
+async function removeEmpresa(id) {
+  if (!confirm('¿Quitar esta empresa? Sus cotizaciones, obras y presupuesto quedan sin empresa asignada, no se borran.')) return;
+  await apiFetch(`${API}/empresas/${id}`, { method: 'DELETE' });
+  if (currentEmpresaId === id) currentEmpresaId = '';
+  await loadEmpresas();
+  loadObras(); renderPresupuesto(); loadQuotes();
+}
+
+function renderEmpresasArea() {
+  const area = document.getElementById('empresas-area');
+  if (!area) return;
+  if (empresasCache.length === 0) { area.innerHTML = '<p class="empty">Aún no has agregado empresas a este grupo.</p>'; return; }
+  area.innerHTML = '<div class="table-scroll"><table><thead><tr><th>Razón social</th><th>NIT</th><th>Dirección</th><th></th></tr></thead><tbody>' +
+    empresasCache.map(e => `<tr><td><strong>${e.nombre}</strong></td><td>${e.nit || '—'}</td><td>${e.direccion || '—'}</td><td><button class="btn-ghost btn-small" onclick="removeEmpresa('${e.id}')">Quitar</button></td></tr>`).join('') +
+    '</tbody></table></div>';
+}
+
+async function afterLogin() {
+  updateSessionUI();
+  await loadSettings();
+  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget(), loadMaterialAliases(), loadObras(), loadAgreements()]);
+  await loadQuotes();
+}
+
 /* ---------- Init ---------- */
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
@@ -1409,9 +1856,25 @@ resetItemRows();
 toggleGarantiaCustom(); toggleGarantiaDiasCustom();
 
 (async function init() {
-  await loadSettings();
-  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget(), loadMaterialAliases(), loadObras(), loadAgreements()]);
-  await loadQuotes();
+  const status = await (await fetch(`${API}/auth/status`)).json();
+  if (!status.hasGroups) {
+    // Nadie ha configurado un grupo empresarial todavía — se pide crearlo ahora.
+    showAuthSetupView(); showAuthGate(); return;
+  }
+  if (!sessionToken) { showAuthLogin(); showAuthGate(); return; }
+  // Ya hay grupos y tenemos un token guardado — verificarlo antes de continuar.
+  try {
+    const meRes = await fetch(`${API}/me`, { headers: { 'X-Session-Token': sessionToken } });
+    if (!meRes.ok) throw new Error('sesion_invalida');
+    const me = await meRes.json();
+    if (!me.group) throw new Error('sesion_invalida');
+    currentGroup = me.group;
+    empresasCache = me.empresas || [];
+    await afterLogin();
+  } catch (e) {
+    setSessionToken('');
+    showAuthLogin(); showAuthGate();
+  }
 })();
 </script>
 </body>
