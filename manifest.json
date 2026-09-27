@@ -1,0 +1,13 @@
+{
+  "name": "Nexobra",
+  "short_name": "Nexobra",
+  "description": "Marketplace e inteligencia financiera para constructoras",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EDEAE1",
+  "theme_color": "#1B1B18",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

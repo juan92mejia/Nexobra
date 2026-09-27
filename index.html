@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nexobra</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#1B1B18">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#EDEAE1; --ink:#1B1B18; --ink-soft:#57544C; --line:#D8D3C6; --accent:#D65A1F; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#16171A; --ink:#F1EFE9; --ink-soft:#A9A6A0; --line:#35373B; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Source Sans 3',sans-serif; padding: env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0); }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 60px 20px; }
+  h1 { font-family:'Montserrat',sans-serif; font-weight:800; font-size: 32px; margin: 0 0 8px; }
+  p.lead { color: var(--ink-soft); margin: 0 0 32px; }
+  a.tile { display: block; border: 1px solid var(--line); padding: 20px; margin-bottom: 14px; text-decoration: none; color: var(--ink); }
+  a.tile:hover { border-color: var(--accent); }
+  a.tile .name { font-family:'Montserrat',sans-serif; font-weight:700; font-size: 18px; }
+  a.tile .desc { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><img src="/icons/icon-192.png" alt="" width="34" height="34" style="vertical-align:-6px; margin-right:8px;">Nexobra</h1>
+  <p class="lead">Marketplace e inteligencia financiera para constructoras.</p>
+  <a class="tile" href="/mercado.html">
+    <div class="name">Nexobra Mercado</div>
+    <div class="desc">Comparador de cotizaciones de proveedores</div>
+  </a>
+  <a class="tile" href="/nextrics.html">
+    <div class="name">Nexobra Nextrics</div>
+    <div class="desc">Salud financiera de tus proyectos</div>
+  </a>
+</div>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
+</script>
+</body>
+</html>
