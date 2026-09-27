@@ -12,111 +12,148 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#EAE7DE; --panel:#FFFFFF; --ink:#201F1B; --ink-soft:#57544C; --line:#D8D3C6;
-    --accent:#D65A1F; --good:#2F6B3A; --good-bg:#E4EEE2; --warn:#9A6B00; --warn-bg:#F5EBD4;
-    --bad:#A6321F; --bad-bg:#F5DFDA; --info:#2A5C8A; --info-bg:#E2EBF3;
+    --bg:#F4F6F9; --panel:#FFFFFF; --panel-soft:#F2F5F9; --ink:#0E2540; --ink-soft:#5C6B7E; --line:#DCE3EC;
+    --accent:#FF6A1F; --accent-soft:#FFE7D9; --accent-2:#1662D6; --accent-2-soft:#DDEAFC;
+    --good:#128A5B; --good-bg:#DEF4EA; --warn:#B4720A; --warn-bg:#FCEDD2;
+    --bad:#D93B23; --bad-bg:#FBE1DC; --info:#1662D6; --info-bg:#DDEAFC;
+    --grid-line: rgba(22,98,214,.07);
+    --radius-lg:12px; --radius-md:8px; --radius-sm:7px; --radius-pill:999px;
+    --shadow-card: 0 1px 2px rgba(14,37,64,.05);
+    --shadow-pop: 0 2px 10px rgba(14,37,64,.10);
     box-sizing:border-box; padding-top: env(safe-area-inset-top,0px); padding-bottom: env(safe-area-inset-bottom,0px);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg:#17181A; --panel:#222325; --ink:#F1EFE9; --ink-soft:#A9A6A0; --line:#383A3D;
-      --good-bg:#1E2B20; --warn-bg:#332B15; --bad-bg:#33201C; --info-bg:#1B2A36;
+      --bg:#0A1420; --panel:#101C2C; --panel-soft:#152234; --ink:#EAF1FA; --ink-soft:#93A5BC; --line:#22334A;
+      --accent-soft:#3A2412; --accent-2-soft:#122A47;
+      --good-bg:#0F3324; --warn-bg:#332107; --bad-bg:#3A1C14; --info-bg:#122A47;
+      --grid-line: rgba(120,170,255,.06);
+      --shadow-card: 0 1px 2px rgba(0,0,0,.35);
+      --shadow-pop: 0 4px 16px rgba(0,0,0,.5);
     }
   }
-  html { scroll-padding-top: env(safe-area-inset-top,0px); }
+  html { scroll-padding-top: 76px; }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Source Sans 3',sans-serif; line-height:1.5; }
+  body { margin:0;
+    background-color:var(--bg);
+    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color:var(--ink); font-family:'Source Sans 3',sans-serif; line-height:1.55; }
   h1,h2,h3 { font-family:'Montserrat',sans-serif; font-weight:700; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 80px; }
-  a.back { color: var(--ink-soft); text-decoration: none; font-size: 14px; }
-  header { border-bottom: 3px solid var(--ink); padding-bottom: 18px; margin: 12px 0 20px; }
-  header .brand { font-size: 13px; color: var(--accent); font-weight: 700; margin-bottom: 4px; display:flex; align-items:center; gap:8px; }
-  header h1 { font-size: 26px; margin: 0 0 6px; }
-  header p { margin: 0; color: var(--ink-soft); max-width: 68ch; }
-  .season-tip { background: var(--info-bg); color: var(--info); border: 1px solid var(--info); padding: 10px 14px; font-size: 13.5px; margin-bottom: 20px; }
-  .card { background: var(--panel); border: 1px solid var(--line); padding: 20px; margin-bottom: 20px; }
-  .card h2 { font-size: 17px; margin: 0 0 4px; }
-  .card h3 { font-size: 14px; margin: 18px 0 10px; color: var(--ink-soft); }
-  .field-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 20px 90px; }
+  a.back { color: var(--ink-soft); text-decoration: none; font-size: 14px; font-weight:600; display:inline-flex; align-items:center; gap:4px; }
+  a.back:hover { color: var(--accent); }
+  header { padding: 20px 24px 24px; margin: 10px 0 20px; background:var(--ink); border-radius:var(--radius-lg); position:relative; overflow:hidden; }
+  header::before { content:""; position:absolute; inset:0 0 auto 0; height:4px; background:linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  header::after { content:""; position:absolute; inset:0; opacity:.5; pointer-events:none;
+    background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 24px 24px; }
+  header .brand { font-size: 12.5px; color: var(--accent); font-weight: 800; margin-bottom: 8px; display:flex; align-items:center; gap:8px; letter-spacing:.08em; position:relative; }
+  header .brand img { border-radius:6px; }
+  header h1 { font-size: 27px; margin: 0 0 8px; letter-spacing:-.01em; color:#fff; position:relative; }
+  header p { margin: 0; color:#AFC0D6; max-width: 68ch; font-size:14.5px; position:relative; }
+  .quicknav { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 14px; margin-bottom:6px; scrollbar-width:thin; }
+  .quicknav a { flex:none; font-size:12.5px; font-weight:700; color:var(--accent-2); text-decoration:none; background:var(--panel); border:1px solid var(--accent-2-soft); padding:7px 13px; border-radius:var(--radius-pill); transition:all .15s ease; }
+  .quicknav a:hover { color:#fff; border-color:var(--accent); background:var(--accent); }
+  .season-tip { background: var(--info-bg); color: var(--info); border: 1px solid var(--accent-2-soft); border-left:3px solid var(--accent-2); border-radius:var(--radius-md); padding: 11px 15px; font-size: 13.5px; margin-bottom: 20px; }
+  .card { position:relative; background: var(--panel); border: 1px solid var(--line); border-left-width:3px; border-radius:var(--radius-lg); padding: 22px; margin-bottom: 16px; box-shadow: var(--shadow-card); scroll-margin-top:76px; transition: box-shadow .2s ease; overflow:hidden; }
+  .card::after { content:''; position:absolute; top:12px; right:12px; width:13px; height:13px; border-top:1.5px solid var(--line); border-right:1.5px solid var(--line); opacity:.55; pointer-events:none; }
+  .card h2::after { content:''; display:inline-block; width:26px; height:1.5px; background:repeating-linear-gradient(90deg, var(--line) 0 3px, transparent 3px 6px); margin-left:2px; opacity:.7; }
+  .card.card-orange { border-left-color: var(--accent); }
+  .card.card-blue { border-left-color: var(--accent-2); }
+  .card.card-mix { border-image: linear-gradient(180deg, var(--accent), var(--accent-2)) 1; border-left-width:3px; }
+  .card h2 { font-size: 16.5px; margin: 0 0 4px; display:flex; align-items:center; gap:11px; }
+  .card h3 { font-size: 12.5px; margin: 20px 0 10px; color: var(--ink-soft); text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+  .card-icon { flex:none; width:32px; height:32px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; }
+  .card-orange .card-icon { background:var(--accent-soft); color:var(--accent); }
+  .card-blue .card-icon { background:var(--accent-2-soft); color:var(--accent-2); }
+  .card-mix .card-icon { background:linear-gradient(135deg,var(--accent-soft),var(--accent-2-soft)); color:var(--accent); }
+  .card-icon svg { width:17px; height:17px; }
+  .field-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
   @media (max-width: 640px) { .field-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 420px) { .field-grid { grid-template-columns: 1fr; } }
-  .field-subhead { grid-column: 1/-1; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 12px; margin-top: 2px; }
+  .field-subhead { grid-column: 1/-1; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; font-weight:700; color: var(--accent); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 4px; }
   .field-subhead:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-  label { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:4px; }
+  label { display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:5px; font-weight:600; }
   label .opt { font-weight: 400; font-style: italic; }
-  input, textarea, select { width:100%; padding:9px 10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit; font-size:15px; }
-  input:focus, textarea:focus, select:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  input, textarea, select { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--panel-soft); color:var(--ink); font:inherit; font-size:15px; transition:border-color .15s ease, box-shadow .15s ease; }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
   .checkbox-row { display:flex; align-items:center; gap:8px; }
   .checkbox-row input { width:auto; }
   .checkbox-row label { margin:0; }
-  button { font:inherit; font-weight:700; cursor:pointer; border:none; padding:11px 18px; font-size:15px; }
-  .btn-primary { background: var(--ink); color: var(--panel); margin-top: 14px; }
-  .btn-primary:hover { background: var(--accent); }
-  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); padding: 6px 10px; font-size: 13px; font-weight:600; }
-  .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
-  .btn-small { padding: 5px 9px; font-size: 12.5px; }
+  button { font:inherit; font-weight:700; cursor:pointer; border:none; padding:11px 20px; font-size:15px; border-radius:var(--radius-pill); transition:transform .12s ease, box-shadow .12s ease, background .15s ease, color .15s ease; }
+  .btn-primary { background: var(--accent); color: #fff; margin-top: 14px; box-shadow:0 4px 14px -4px rgba(255,106,31,.45); }
+  .btn-primary:hover { background: var(--ink); transform:translateY(-1px); box-shadow:0 8px 18px -6px rgba(14,37,64,.5); }
+  .btn-ghost { background: var(--panel-soft); color: var(--ink-soft); border: 1px solid var(--line); padding: 7px 13px; font-size: 13px; font-weight:700; }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background:var(--accent-soft); }
+  .btn-small { padding: 5px 11px; font-size: 12.5px; }
   .item-row { display:grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:end; }
   @media (max-width: 640px) { .item-row { grid-template-columns: 1fr 1fr; } }
-  .item-row .mini-label { font-size:11px; color:var(--ink-soft); margin-bottom:2px; }
+  .item-row .mini-label { font-size:11px; color:var(--ink-soft); margin-bottom:2px; font-weight:600; }
   table { width:100%; border-collapse: collapse; font-size:14px; }
-  th, td { text-align:left; padding:8px 8px; border-bottom:1px solid var(--line); }
-  th { color: var(--ink-soft); font-weight:700; font-size:12px; }
-  .table-scroll { overflow-x: auto; }
-  .empty { color: var(--ink-soft); font-size:14px; padding:8px 0; }
+  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); }
+  th { color: var(--ink-soft); font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; background:var(--panel-soft); position:sticky; top:0; }
+  tbody tr:hover { background:var(--panel-soft); }
+  .table-scroll { overflow-x: auto; border:1px solid var(--line); border-radius:var(--radius-md); }
+  .table-scroll table { border:none; }
+  .table-scroll th:first-child, .table-scroll td:first-child { padding-left:14px; }
+  .empty { color: var(--ink-soft); font-size:14px; padding:14px; text-align:center; background:var(--panel-soft); border-radius:var(--radius-md); border:1px dashed var(--line); }
   .hint { font-size:13px; color: var(--ink-soft); margin: 0 0 10px; }
-  code { background: var(--bg); border: 1px solid var(--line); padding: 1px 5px; font-size: 13px; }
-  .btn-whatsapp { display:inline-block; background:#2F6B3A; color:#fff; text-decoration:none; padding:6px 12px; font-size:13px; font-weight:700; margin-top:6px; }
+  code { background: var(--panel-soft); border: 1px solid var(--line); border-radius:4px; padding: 1px 6px; font-size: 13px; }
+  .btn-whatsapp { display:inline-block; background:#2F6B3A; color:#fff; text-decoration:none; padding:7px 14px; border-radius:var(--radius-pill); font-size:13px; font-weight:700; margin-top:6px; transition:background .15s ease; }
   .btn-whatsapp:hover { background:#244F2C; }
-  .quote-card { border: 1px solid var(--line); padding: 16px; margin-bottom: 14px; }
-  .quote-card.best { border-color: var(--good); background: var(--good-bg); }
+  .quote-card { border: 1px solid var(--line); border-radius:var(--radius-md); padding: 18px; margin-bottom: 14px; background:var(--panel-soft); transition:box-shadow .15s ease; }
+  .quote-card:hover { box-shadow:var(--shadow-card); }
+  .quote-card.best { border-color: var(--good); border-width:1.5px; background: var(--good-bg); box-shadow:var(--shadow-pop); }
   .quote-head { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
   .quote-head .provider { font-family:'Montserrat',sans-serif; font-weight:700; font-size:16px; }
-  .quote-head .total { font-family:'Montserrat',sans-serif; font-weight:700; font-size:20px; }
-  .tag-best { color: var(--good); font-weight:700; font-size:12px; display:block; }
-  .tag-partial { color: var(--warn); font-weight:700; font-size:12px; }
-  .tag-nostock { color: var(--bad); font-weight:700; font-size:12px; }
+  .quote-head .total { font-family:'Montserrat',sans-serif; font-weight:800; font-size:21px; color:var(--accent-2); }
+  .tag-best { color: var(--good); font-weight:700; font-size:11.5px; display:inline-block; background:var(--good-bg); padding:2px 8px; border-radius:var(--radius-pill); margin-top:2px; }
+  .tag-partial { color: var(--warn); font-weight:700; font-size:11.5px; background:var(--warn-bg); padding:2px 8px; border-radius:var(--radius-pill); }
+  .tag-nostock { color: var(--bad); font-weight:700; font-size:11.5px; background:var(--bad-bg); padding:2px 8px; border-radius:var(--radius-pill); }
   .quote-meta { font-size:13px; color: var(--ink-soft); margin-bottom: 10px; }
   .provider-sub { font-size:11.5px; color: var(--ink-soft); font-weight:400; margin-top:2px; }
   .price-trend-up { color: var(--bad); font-size:11px; display:block; }
   .price-trend-down { color: var(--good); font-size:11px; display:block; }
   .price-trend-flat { color: var(--ink-soft); font-size:11px; display:block; }
   .lead-warn { font-size:11px; color: var(--warn); display:block; }
-  .insight { border-left:3px solid var(--accent); padding:4px 0 4px 14px; margin:0 0 12px; font-size:14.5px; }
-  .insight-info { border-left-color: var(--info); }
-  .plan-box { border:1px solid var(--line); padding:14px 16px; margin-bottom:14px; background:var(--bg); }
+  .insight { border-left:3px solid var(--accent); background:var(--accent-soft); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:8px 14px; margin:0 0 12px; font-size:14.5px; }
+  .insight-info { border-left-color: var(--info); background:var(--info-bg); }
+  .plan-box { border:1px solid var(--line); border-radius:var(--radius-md); padding:16px 18px; margin-bottom:14px; background:var(--panel-soft); }
   .plan-box h4 { margin:0 0 8px; font-size:14px; }
-  .plan-box .total-line { font-size:20px; font-family:'Montserrat',sans-serif; margin:6px 0; }
+  .plan-box .total-line { font-size:22px; font-family:'Montserrat',sans-serif; font-weight:800; margin:6px 0; color:var(--accent-2); }
   .plan-box ul { margin:8px 0 0; padding-left:20px; }
   .plan-box li { margin-bottom:4px; font-size:14px; }
   .cons-title { color: var(--warn); font-weight:700; font-size:13px; margin-top:10px; }
-  .badge-verdict { display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; margin-bottom:10px; }
+  .badge-verdict { display:inline-block; font-size:12px; font-weight:700; padding:5px 12px; margin-bottom:10px; border-radius:var(--radius-pill); }
   .badge-mixed, .badge-single { background: var(--good-bg); color: var(--good); }
   .badge-forced { background: var(--warn-bg); color: var(--warn); }
   .badge-risk { background: var(--bad-bg); color: var(--bad); }
-  .settings-row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding-bottom:14px; margin-bottom:14px; border-bottom:1px dashed var(--line); }
+  .settings-row { display:grid; grid-template-columns: 1fr 1fr; gap:14px; padding-bottom:16px; margin-bottom:16px; border-bottom:1px dashed var(--line); }
   @media (max-width: 520px) { .settings-row { grid-template-columns: 1fr; } }
-  .progress-track { background: var(--line); height:8px; width:100%; border-radius:4px; overflow:hidden; margin:4px 0; }
-  .progress-fill { height:100%; background: var(--good); }
-  .progress-fill.warn { background: var(--warn); }
-  .progress-fill.risk { background: var(--bad); }
-  .budget-item { border:1px solid var(--line); padding:12px 14px; margin-bottom:10px; background:var(--bg); }
+  .progress-track { background: var(--line); height:9px; width:100%; border-radius:var(--radius-pill); overflow:hidden; margin:5px 0; }
+  .progress-fill { height:100%; background: linear-gradient(90deg, var(--good), #4a9159); border-radius:var(--radius-pill); }
+  .progress-fill.warn { background: linear-gradient(90deg, var(--warn), #c48f1f); }
+  .progress-fill.risk { background: linear-gradient(90deg, var(--bad), #c94d34); }
+  .budget-item { border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 16px; margin-bottom:10px; background:var(--panel-soft); }
   .budget-item .budget-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:14px; margin-bottom:4px; }
-  .pedido-item { border:1px solid var(--line); padding:12px 14px; margin-bottom:10px; background:var(--bg); }
+  .pedido-item { border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 16px; margin-bottom:10px; background:var(--panel-soft); }
   .pedido-item .pedido-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:14px; margin-bottom:8px; }
   .pedido-controls { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
   .pedido-controls > div { min-width:150px; }
   .link-list { list-style:none; margin:10px 0 0; padding:0; }
-  .link-list li { margin-bottom:8px; }
+  .link-list li { margin-bottom:8px; padding:9px 12px; background:var(--panel-soft); border:1px solid var(--line); border-radius:var(--radius-sm); }
   .link-list a { color: var(--accent); text-decoration:none; font-weight:700; font-size:14px; }
   .link-list a:hover { text-decoration:underline; }
-  .unify-suggestion { border:1px solid var(--warn); background:var(--warn-bg); padding:12px 14px; margin-bottom:10px; }
+  .unify-suggestion { border:1px solid var(--warn); background:var(--warn-bg); border-radius:var(--radius-md); padding:14px 16px; margin-bottom:10px; }
   .unify-suggestion p { margin:0 0 8px; font-size:14px; }
   .ai-disclaimer { font-size:12px; color: var(--ink-soft); font-style:italic; margin-top:8px; }
   .import-preview td { white-space:normal; vertical-align:top; }
   .import-preview input[type="text"] { min-width:160px; }
   .import-preview input[type="number"] { min-width:80px; }
   .import-preview input[type="checkbox"] { width:auto; }
-  footer { color: var(--ink-soft); font-size:13px; margin-top:24px; text-align:center; }
+  #providers-area table input[type="text"] { min-width:130px; padding:6px 9px; font-size:13px; border-radius:6px; }
+  footer { color: var(--ink-soft); font-size:13px; margin-top:28px; text-align:center; }
 </style>
 </head>
 <body>
@@ -128,10 +165,22 @@
     <p>Registra la cotización completa de cada proveedor — con todos sus materiales, disponibilidad, ciudad, condiciones de pago y retenciones colombianas — y compara el costo total real, con historial de cumplimiento y compra anticipada según tu presupuesto de obra.</p>
   </header>
 
+  <nav class="quicknav">
+    <a href="#card-presupuesto">Presupuesto</a>
+    <a href="#card-buscar">Buscar mercado</a>
+    <a href="#card-acuerdos">Acuerdos marco</a>
+    <a href="#card-agregar">Agregar cotización</a>
+    <a href="#card-comparacion">Comparar</a>
+    <a href="#insight-card">Plan recomendado</a>
+    <a href="#card-pedidos">Pedidos</a>
+    <a href="#card-proveedores">Proveedores</a>
+    <a href="#card-ajustes">Ajustes</a>
+  </nav>
+
   <div class="season-tip" id="season-tip"></div>
 
-  <div class="card">
-    <h2>Ajustes de comparación</h2>
+  <div class="card card-blue" id="card-ajustes">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"></circle><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"></circle></svg></span>Ajustes de comparación</h2>
     <p class="hint">Se guardan en el servidor de tu empresa (compartidos para todos los que usen esta cuenta de Nexobra).</p>
     <div class="settings-row">
       <div><label for="s-capital">Costo de tu capital / oportunidad (% anual) <span class="opt">— 0 = ignorar</span></label><input id="s-capital" type="number" min="0" step="any"></div>
@@ -140,10 +189,32 @@
     </div>
     <div class="checkbox-row"><input type="checkbox" id="s-retenedor"><label for="s-retenedor">Mi empresa es agente autorretenedor / practica retención en la fuente a proveedores</label></div>
     <p class="hint" style="margin-top:6px;">Si lo marcas, se calcula la retefuente a practicar (2,5% declarante / 3,5% no declarante, sobre compras que superen 10 UVT ≈ $498.000 en 2025 — valor referencial). No aumenta tu costo: es dinero que igual pagas, solo que una parte va directo a la DIAN.</p>
+
+    <h3>Datos de tu empresa</h3>
+    <p class="hint">Se usan para membretear tus órdenes de compra formales.</p>
+    <div class="field-grid">
+      <div><label for="s-empresa-nombre">Razón social</label><input id="s-empresa-nombre" type="text" placeholder="Ej: Constructora Ejemplo S.A.S."></div>
+      <div><label for="s-empresa-nit">NIT</label><input id="s-empresa-nit" type="text" placeholder="900.000.000-0"></div>
+      <div><label for="s-empresa-direccion">Dirección</label><input id="s-empresa-direccion" type="text" placeholder="Cra 00 # 00-00, Ciudad"></div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Presupuesto de obra y compra anticipada</h2>
+  <div class="card card-orange" id="card-obras">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="9" height="18" rx="1"></rect><rect x="15" y="9" width="5" height="12" rx="1"></rect><line x1="7" y1="7" x2="10" y2="7"></line><line x1="7" y1="11" x2="10" y2="11"></line><line x1="7" y1="15" x2="10" y2="15"></line></svg></span>Obras / proyectos</h2>
+    <p class="hint">Opcional: si manejas varias obras al tiempo, sepáralas aquí para que el presupuesto y las cotizaciones de cada una no se mezclen. Si no creas ninguna, todo funciona junto como "General" — igual que hasta ahora.</p>
+    <div class="field-grid">
+      <div><label for="o-nombre">Nombre de la obra/proyecto</label><input id="o-nombre" type="text" placeholder="Ej: Torre A - Chapinero"></div>
+    </div>
+    <button class="btn-primary" onclick="addObra()">Crear obra</button>
+    <div style="margin-top:14px;">
+      <label for="obra-selector">Obra activa <span class="opt">— define en qué obra se guardan las próximas cotizaciones y materiales de presupuesto que agregues</span></label>
+      <select id="obra-selector" onchange="setActiveObra(this.value)"><option value="">Todas / General</option></select>
+    </div>
+    <div id="obras-area" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card card-blue" id="card-presupuesto">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18"></path><circle cx="16" cy="14.5" r="1.4" fill="currentColor" stroke="none"></circle></svg></span>Presupuesto de obra y compra anticipada</h2>
     <p class="hint">Registra las cantidades del presupuesto por material. La app cruza esto con tus pedidos en curso y tu historial para saber cuánto llevas comprado, y te avisa cuándo negociar el lote anticipado y cuándo reponer — para no comprar a última hora en pequeñas cantidades durante la obra.</p>
     <div class="settings-row">
       <div><label for="s-anticipado">Meta de compra anticipada antes de iniciar obra (% del presupuesto)</label><input id="s-anticipado" type="number" min="1" max="100" step="any"></div>
@@ -167,8 +238,8 @@
     <div id="import-preview-area"></div>
   </div>
 
-  <div class="card">
-    <h2>Buscar en el mercado más amplio</h2>
+  <div class="card card-orange" id="card-buscar">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"></circle><line x1="20" y1="20" x2="14.5" y2="14.5"></line></svg></span>Buscar en el mercado más amplio</h2>
     <p class="hint">Para materiales que no logras cotizar localmente, o que conviene pedir por encargo directo a fábrica: genera enlaces reales y sugerencias de fabricantes/distribuidores conocidos, para ampliar tu radar más allá de intermediarios cercanos.</p>
     <div class="field-grid">
       <div><label for="f-search-material">Material que necesitas</label><input id="f-search-material" type="text" placeholder="Ej: Perfilería de aluminio serie 3"></div>
@@ -180,8 +251,22 @@
     <div id="ai-manufacturers-area"></div>
   </div>
 
-  <div class="card">
-    <h2>Agregar cotización</h2>
+  <div class="card card-blue" id="card-acuerdos">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 0 0 4 4h1a4 4 0 0 0 0-8h-1"></path><path d="M15 12a4 4 0 0 0-4-4h-1a4 4 0 0 0 0 8h1"></path></svg></span>Acuerdos marco (compra contra convenios)</h2>
+    <p class="hint">Si ya negociaste un precio fijo con un proveedor para un material, por un tiempo determinado, regístralo aquí. El comparador lo muestra como precio pactado y te avisa si el proveedor te cotiza por encima de lo acordado, o si el acuerdo está por vencer para que renegocies a tiempo.</p>
+    <div class="field-grid">
+      <div><label for="a-provider">Proveedor</label><input id="a-provider" type="text" placeholder="Ej: Acuatubos"></div>
+      <div><label for="a-material">Material</label><input id="a-material" type="text" placeholder="Ej: Válvula compuerta elástica 2&quot;"></div>
+      <div><label for="a-price">Precio pactado (sin IVA)</label><input id="a-price" type="number" min="0" step="any" placeholder="400000"></div>
+      <div><label for="a-iva">IVA (%)</label><input id="a-iva" type="number" min="0" step="any" placeholder="19"></div>
+      <div><label for="a-vigencia">Vigente hasta</label><input id="a-vigencia" type="date"></div>
+    </div>
+    <button class="btn-primary" onclick="addAgreement()">Registrar acuerdo</button>
+    <div id="agreements-area" style="margin-top:14px;"></div>
+  </div>
+
+  <div class="card card-orange" id="card-agregar">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1" fill="currentColor" stroke="none"></circle><circle cx="18" cy="20" r="1" fill="currentColor" stroke="none"></circle><path d="M3 4h2l2.4 11.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6"></path></svg></span>Agregar cotización</h2>
     <div class="field-grid">
       <div class="field-subhead">Datos básicos</div>
       <div><label for="f-provider">Proveedor</label><input id="f-provider" type="text" placeholder="Ej: Homecenter"></div>
@@ -240,21 +325,21 @@
     <div><button class="btn-primary" onclick="saveQuote()">Guardar cotización</button></div>
   </div>
 
-  <div class="card">
-    <h2>Pegar cotización con IA</h2>
+  <div class="card card-mix" id="card-pegar-ia">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c.6 3.6 2.4 5.4 6 6-3.6.6-5.4 2.4-6 6-.6-3.6-2.4-5.4-6-6 3.6-.6 5.4-2.4 6-6Z"></path></svg></span>Pegar cotización con IA</h2>
     <p class="hint">Pega el texto de un correo, un chat de WhatsApp, o lo que hayas transcrito de un PDF/imagen — puede incluir varios materiales a la vez.</p>
     <textarea id="f-paste" rows="4" placeholder="Ej: Homecenter cotiza: 100 tubos conduflex 1/2 a $1.200 c/u, 30 tomacorrientes sencillos a $8.500 c/u. IVA 19%, transporte $80.000, entrega 5 días, 50% anticipo. Tel 3001234567"></textarea>
     <button class="btn-primary" onclick="extractQuote()">Extraer con IA</button>
     <p class="hint" id="extract-status"></p>
   </div>
 
-  <div class="card">
-    <h2>Comparación de cotizaciones</h2>
+  <div class="card card-mix" id="card-comparacion">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="19" y1="20" x2="19" y2="14"></line></svg></span>Comparación de cotizaciones</h2>
     <div id="quotes-area"><p class="empty">Cargando…</p></div>
   </div>
 
-  <div class="card" id="unify-card" style="display:none;">
-    <h2>¿Son el mismo material?</h2>
+  <div class="card card-orange" id="unify-card" style="display:none;">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a4 4 0 0 0 4 4h4"></path><path d="M18 3v6a4 4 0 0 1-4 4"></path><path d="M12 13v8"></path></svg></span>¿Son el mismo material?</h2>
     <p class="hint">Cada proveedor nombra sus productos a su manera. Antes de calcular el plan de compra, confirma cuáles nombres se refieren al mismo material — así el comparador puede saber si un proveedor realmente cubre tu pedido completo. Nunca se unifican solos: siempre lo confirmas tú, porque podrían ser productos distintos (marca, modelo, calidad).</p>
     <div id="unify-area"></div>
     <h3>Unificar manualmente</h3>
@@ -267,19 +352,19 @@
     <button class="btn-primary" onclick="manualUnify()">Unificar estos materiales</button>
   </div>
 
-  <div class="card" id="insight-card" style="display:none;">
-    <h2>Plan de compra recomendado</h2>
+  <div class="card card-mix" id="insight-card" style="display:none;">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a6 6 0 0 0-4 10.5c.7.6 1 1.3 1 2.5h6c0-1.2.3-1.9 1-2.5A6 6 0 0 0 12 2Z"></path></svg></span>Plan de compra recomendado</h2>
     <div id="insight-text"></div>
   </div>
 
-  <div class="card">
-    <h2>Pedidos en curso</h2>
+  <div class="card card-orange" id="card-pedidos">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="12" height="9"></rect><path d="M14 10h4l3 3v3h-7z"></path><circle cx="7" cy="18" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="17.5" cy="18" r="1.6" fill="currentColor" stroke="none"></circle></svg></span>Pedidos en curso</h2>
     <p class="hint">Cuando confirmes una compra, márcala en su tarjeta de cotización. Al registrar si llegó a tiempo y con qué calidad, se construye el historial real de cada proveedor.</p>
     <div id="pedidos-area"><p class="empty">Cargando…</p></div>
   </div>
 
-  <div class="card">
-    <h2>Desempeño y gasto por proveedor</h2>
+  <div class="card card-blue" id="card-proveedores">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3 3-5 6-5s6 2 6 5"></path><circle cx="17" cy="9" r="2.4"></circle><path d="M21 20c0-2.2-1.6-3.9-3.6-4.6"></path></svg></span>Desempeño y gasto por proveedor</h2>
     <div id="providers-area"><p class="empty">Cargando…</p></div>
   </div>
 
@@ -378,7 +463,8 @@ function renderMaterialUnification() {
   const area = document.getElementById('unify-area');
   if (!card) return;
   const rawNames = [];
-  quotesCache.forEach(q => q.items.forEach(it => { if (!rawNames.some(r => r.name === it.material)) rawNames.push({ name: it.material, provider: q.provider }); }));
+  const quotesForUnify = visibleQuotes();
+  quotesForUnify.forEach(q => q.items.forEach(it => { if (!rawNames.some(r => r.name === it.material)) rawNames.push({ name: it.material, provider: q.provider }); }));
 
   const suggestions = [];
   for (let i = 0; i < rawNames.length; i++) {
@@ -410,7 +496,7 @@ function renderMaterialUnification() {
     html += '</ul>';
   }
   area.innerHTML = html || '<p class="hint">No se detectaron nombres distintos que parezcan referirse al mismo material. Si sabes que dos cotizaciones usan nombres distintos para lo mismo, únelos manualmente abajo.</p>';
-  card.style.display = quotesCache.length >= 2 ? 'block' : 'none';
+  card.style.display = quotesForUnify.length >= 2 ? 'block' : 'none';
 }
 
 /* ---------- Tip de temporada ---------- */
@@ -433,6 +519,9 @@ async function loadSettings() {
   document.getElementById('s-anticipado').value = settings.pctAnticipado || 60;
   document.getElementById('s-disparo').value = settings.pctDisparo || 15;
   document.getElementById('s-completitud').value = settings.toleranciaCompletitud != null ? settings.toleranciaCompletitud : 8;
+  document.getElementById('s-empresa-nombre').value = settings.empresaNombre || '';
+  document.getElementById('s-empresa-nit').value = settings.empresaNit || '';
+  document.getElementById('s-empresa-direccion').value = settings.empresaDireccion || '';
 }
 
 async function saveSetting(field, value) {
@@ -447,6 +536,145 @@ document.getElementById('s-retenedor').addEventListener('change', e => saveSetti
 document.getElementById('s-anticipado').addEventListener('change', e => saveSetting('pctAnticipado', parseFloat(e.target.value) || 60));
 document.getElementById('s-disparo').addEventListener('change', e => saveSetting('pctDisparo', parseFloat(e.target.value) || 15));
 document.getElementById('s-completitud').addEventListener('change', e => saveSetting('toleranciaCompletitud', parseFloat(e.target.value) || 0));
+document.getElementById('s-empresa-nombre').addEventListener('change', e => saveSetting('empresaNombre', e.target.value.trim()));
+document.getElementById('s-empresa-nit').addEventListener('change', e => saveSetting('empresaNit', e.target.value.trim()));
+document.getElementById('s-empresa-direccion').addEventListener('change', e => saveSetting('empresaDireccion', e.target.value.trim()));
+
+/* ---------- Obras / proyectos ---------- */
+
+let obrasCache = [];
+let currentObraId = (function () { try { return localStorage.getItem('nexobra_obra_activa') || ''; } catch (e) { return ''; } })();
+
+function visibleQuotes() { return currentObraId ? quotesCache.filter(q => q.obraId === currentObraId) : quotesCache; }
+function visibleBudget() { return currentObraId ? budgetCache.filter(b => b.obraId === currentObraId) : budgetCache; }
+
+async function loadObras() {
+  obrasCache = await (await fetch(`${API}/obras`)).json();
+  const sel = document.getElementById('obra-selector');
+  sel.innerHTML = '<option value="">Todas / General</option>' + obrasCache.map(o => `<option value="${o.id}">${o.nombre}</option>`).join('');
+  sel.value = currentObraId || '';
+  renderObrasArea();
+}
+
+function setActiveObra(id) {
+  currentObraId = id || '';
+  try { localStorage.setItem('nexobra_obra_activa', currentObraId); } catch (e) {}
+  renderPresupuesto();
+  renderQuotes(visibleQuotes());
+}
+
+async function addObra() {
+  const nombre = document.getElementById('o-nombre').value.trim();
+  if (!nombre) { alert('Escribe el nombre de la obra.'); return; }
+  const res = await fetch(`${API}/obras`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre }) });
+  if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+  document.getElementById('o-nombre').value = '';
+  await loadObras();
+}
+
+async function removeObra(id) {
+  if (!confirm('¿Quitar esta obra? Las cotizaciones y materiales de presupuesto que tenía asignados no se borran, solo quedan sin obra asignada.')) return;
+  await fetch(`${API}/obras/${id}`, { method: 'DELETE' });
+  if (currentObraId === id) setActiveObra('');
+  await loadObras();
+}
+
+function renderObrasArea() {
+  const area = document.getElementById('obras-area');
+  if (obrasCache.length === 0) { area.innerHTML = ''; return; }
+  area.innerHTML = '<ul class="link-list">' + obrasCache.map(o => `<li><strong>${o.nombre}</strong> — <button class="btn-ghost btn-small" onclick="removeObra('${o.id}')">Quitar</button></li>`).join('') + '</ul>';
+}
+
+/* ---------- Acuerdos marco (compra contra convenios) ---------- */
+
+let agreementsCache = [];
+
+async function loadAgreements() { agreementsCache = await (await fetch(`${API}/agreements`)).json(); renderAgreements(); }
+
+async function addAgreement() {
+  const provider = document.getElementById('a-provider').value.trim();
+  const material = document.getElementById('a-material').value.trim();
+  const price = parseFloat(document.getElementById('a-price').value);
+  const iva = parseFloat(document.getElementById('a-iva').value) || 0;
+  const vigenciaHasta = document.getElementById('a-vigencia').value;
+  if (!provider || !material || isNaN(price) || price <= 0 || !vigenciaHasta) { alert('Completa proveedor, material, precio pactado y fecha de vigencia.'); return; }
+  const res = await fetch(`${API}/agreements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider, material, price, iva, vigenciaHasta }) });
+  if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+  document.getElementById('a-provider').value = ''; document.getElementById('a-material').value = ''; document.getElementById('a-price').value = ''; document.getElementById('a-iva').value = ''; document.getElementById('a-vigencia').value = '';
+  await loadAgreements();
+  renderQuotes(visibleQuotes());
+}
+
+async function removeAgreement(id) {
+  await fetch(`${API}/agreements/${id}`, { method: 'DELETE' });
+  await loadAgreements();
+  renderQuotes(visibleQuotes());
+}
+
+function agreementsForKey(key) {
+  const today = new Date().toISOString().slice(0, 10);
+  return agreementsCache.filter(a => canonicalMaterial(a.material).key === key && a.vigenciaHasta >= today);
+}
+
+function renderAgreements() {
+  const area = document.getElementById('agreements-area');
+  if (agreementsCache.length === 0) { area.innerHTML = '<p class="empty">Aún no tienes acuerdos marco registrados.</p>'; return; }
+  const today = new Date();
+  let html = '<div class="table-scroll"><table><thead><tr><th>Proveedor</th><th>Material</th><th>Precio pactado</th><th>Vigente hasta</th><th></th><th></th></tr></thead><tbody>';
+  agreementsCache.forEach(a => {
+    const dias = Math.ceil((new Date(a.vigenciaHasta + 'T00:00:00') - today) / 86400000);
+    const vencido = dias < 0;
+    const porVencer = !vencido && dias <= 15;
+    let estado = `${a.vigenciaHasta}`;
+    if (vencido) estado += ' <span class="badge-verdict badge-risk" style="margin:0;">Vencido</span>';
+    else if (porVencer) estado += ` <span class="badge-verdict badge-forced" style="margin:0;">Vence en ${dias} día${dias === 1 ? '' : 's'} — renegocia</span>`;
+    html += `<tr><td>${a.provider}</td><td>${a.material}</td><td>$${fmt(a.price)}${a.iva ? ` +IVA ${a.iva}%` : ''}</td><td>${estado}</td><td><button class="btn-ghost btn-small" onclick="removeAgreement('${a.id}')">Quitar</button></td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  area.innerHTML = html;
+}
+
+/* ---------- Orden de compra formal ---------- */
+
+function generarOrdenCompra(quoteId) {
+  const q = quotesCache.find(x => x.id === quoteId);
+  if (!q) return;
+  const prov = providersCache.find(p => p.name.toLowerCase() === q.provider.toLowerCase()) || {};
+  const obra = obrasCache.find(o => o.id === q.obraId);
+  const fecha = new Date().toLocaleDateString('es-CO');
+  let itemsRows = q.items.map(it => `<tr><td>${it.material}</td><td style="text-align:right;">${fmt(it.qty)}</td><td style="text-align:right;">$${fmt(it.price)}</td><td style="text-align:right;">$${fmt(it.subtotal)}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Orden de compra — ${q.provider}</title>
+  <style>
+    body{font-family:Arial,sans-serif; color:#201F1B; padding:32px; max-width:760px; margin:0 auto;}
+    h1{font-size:20px; margin-bottom:2px;} h2{font-size:15px; color:#57544C; margin-top:0;}
+    .cols{display:flex; justify-content:space-between; gap:24px; margin:20px 0; font-size:13.5px;}
+    .box{flex:1; border:1px solid #D8D3C6; padding:12px 14px;}
+    table{width:100%; border-collapse:collapse; margin-top:16px; font-size:13.5px;}
+    th,td{border:1px solid #D8D3C6; padding:6px 10px;} th{background:#EAE7DE; text-align:left;}
+    .total-row td{font-weight:bold; background:#F5F3ED;}
+    .meta{font-size:13px; color:#57544C; margin-top:6px;}
+    @media print { button{display:none;} }
+  </style></head><body>
+  <button onclick="window.print()" style="float:right; padding:8px 16px;">Imprimir / Guardar como PDF</button>
+  <h1>Orden de compra</h1>
+  <h2>${fecha}${obra ? ' · Obra: ' + obra.nombre : ''}</h2>
+  <div class="cols">
+    <div class="box"><strong>Comprador</strong><br>${settings.empresaNombre || '(razón social no configurada)'}<br>${settings.empresaNit ? 'NIT ' + settings.empresaNit : ''}<br>${settings.empresaDireccion || ''}</div>
+    <div class="box"><strong>Proveedor</strong><br>${q.provider}<br>${prov.nit ? 'NIT ' + prov.nit : ''}<br>${prov.direccion || ''}<br>${q.phone || prov.phone || ''}</div>
+  </div>
+  <table><thead><tr><th>Material</th><th style="text-align:right;">Cant.</th><th style="text-align:right;">Precio unit.</th><th style="text-align:right;">Subtotal</th></tr></thead><tbody>
+  ${itemsRows}
+  <tr><td colspan="3">IVA</td><td style="text-align:right;">$${fmt(q.ivaValue)}</td></tr>
+  <tr><td colspan="3">Transporte</td><td style="text-align:right;">$${fmt(q.transp)}</td></tr>
+  <tr class="total-row"><td colspan="3">Total</td><td style="text-align:right;">$${fmt(q.total)}</td></tr>
+  </tbody></table>
+  <p class="meta">Ciudad de despacho: ${q.city || '—'} · Plazo de entrega: ${q.days ? q.days + ' días' : '—'} · Condiciones de pago: ${q.pago || '—'}${q.anticipoPct ? ' (' + q.anticipoPct + '% anticipo)' : ''}</p>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  if (!win) { alert('Tu navegador bloqueó la ventana emergente — permite ventanas emergentes para generar la orden de compra.'); return; }
+  win.document.write(html);
+  win.document.close();
+}
 
 /* ---------- Presupuesto de obra ---------- */
 
@@ -457,7 +685,7 @@ async function addBudgetItem() {
   const unidad = document.getElementById('b-unidad').value.trim();
   const cantidadTotal = parseFloat(document.getElementById('b-cantidad').value);
   if (!material || isNaN(cantidadTotal) || cantidadTotal <= 0) { alert('Completa material y una cantidad total mayor a 0.'); return; }
-  const res = await fetch(`${API}/budget`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, unidad, cantidadTotal }) });
+  const res = await fetch(`${API}/budget`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, unidad, cantidadTotal, obraId: currentObraId || null }) });
   if (!res.ok) { const err = await res.json(); alert(err.error); return; }
   document.getElementById('b-material').value = ''; document.getElementById('b-unidad').value = ''; document.getElementById('b-cantidad').value = '';
   loadBudget();
@@ -490,9 +718,10 @@ function computeBudgetStatus(item) {
 
 function renderPresupuesto() {
   const area = document.getElementById('presupuesto-area');
-  if (budgetCache.length === 0) { area.innerHTML = '<p class="empty">Aún no has registrado materiales del presupuesto de obra.</p>'; return; }
+  const list = visibleBudget();
+  if (list.length === 0) { area.innerHTML = `<p class="empty">${currentObraId ? 'Esta obra aún no tiene materiales de presupuesto registrados.' : 'Aún no has registrado materiales del presupuesto de obra.'}</p>`; return; }
   let html = '';
-  budgetCache.forEach(item => {
+  list.forEach(item => {
     const st = computeBudgetStatus(item);
     html += `<div class="budget-item">
       <div class="budget-head"><span><strong>${item.material}</strong> · ${fmt(item.cantidadTotal)} ${item.unidad || 'unid.'} presupuestados</span>
@@ -672,7 +901,7 @@ async function confirmImport() {
     const cantidad = parseFloat(document.getElementById('imp-cant-' + i).value);
     if (material && !isNaN(cantidad) && cantidad > 0) items.push({ material, unidad, cantidad });
   });
-  const res = await fetch(`${API}/budget/bulk`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) });
+  const res = await fetch(`${API}/budget/bulk`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items, obraId: currentObraId || null }) });
   const data = await res.json();
   importPreview = []; document.getElementById('import-preview-area').innerHTML = '';
   document.getElementById('import-status').textContent = `${data.count} materiales importados al presupuesto de obra.`;
@@ -789,7 +1018,7 @@ function collectItems() {
 
 async function loadQuotes() {
   quotesCache = await (await fetch(`${API}/quotes`)).json();
-  renderQuotes(quotesCache);
+  renderQuotes(visibleQuotes());
   renderMaterialUnification();
 }
 
@@ -819,7 +1048,8 @@ async function saveQuote() {
     anticipoPct: parseFloat(document.getElementById('f-anticipo').value) || 0,
     declarante: document.getElementById('f-declarante').value,
     reteicaPct: parseFloat(document.getElementById('f-reteica').value) || 0,
-    garantiaPct, garantiaDias, items
+    garantiaPct, garantiaDias, items,
+    obraId: currentObraId || null
   };
 
   const res = await fetch(`${API}/quotes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -919,6 +1149,7 @@ function renderQuotes(quotes) {
       ${retencionesHtml}
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
         ${wa ? `<a class="btn-whatsapp" href="${wa}" target="_blank" rel="noopener">Contactar por WhatsApp</a>` : ''}
+        <button class="btn-ghost" onclick="generarOrdenCompra('${q.id}')">Generar orden de compra</button>
         <button class="btn-ghost" onclick="markAsOrdered('${q.id}')">Marcar pedido realizado</button>
         <button class="btn-ghost" onclick="removeQuote('${q.id}')">Quitar cotización</button>
       </div>
@@ -973,14 +1204,27 @@ function renderPlanRecomendado(quotes) {
     out += '<h3>Mejor precio por material (entre proveedores)</h3>';
     out += '<p class="hint">Compara precio unitario + IVA de cada ítem — el flete, el anticipo y las retenciones dependen de la cotización completa de cada proveedor; revísalos en su tarjeta.</p>';
     out += '<div class="table-scroll"><table><thead><tr><th>Material</th><th>Mejor opción</th><th>Precio todo incluido</th><th>Disponibilidad</th></tr></thead><tbody>';
+    let agreementNotes = '';
     multi.forEach(m => {
       const pick = pickBestForMaterial(m.candidates);
       const c = pick.chosen;
       const stockTag = c.disponible >= c.qty ? '<span class="tag-best">Stock completo</span>' : (c.disponible > 0 ? `<span class="tag-partial">Parcial</span>` : '<span class="tag-nostock">Sin stock</span>');
       const reasonNote = pick.reason === 'reliability' ? ' <span class="provider-sub">(elegido por confiabilidad, no el más barato)</span>' : '';
       out += `<tr><td>${m.label}</td><td>${c.provider}${reasonNote}</td><td>$${fmt(c.allIn)}</td><td>${stockTag}</td></tr>`;
+
+      const acuerdos = agreementsForKey(m.key);
+      const propio = acuerdos.find(a => a.provider.toLowerCase() === c.provider.toLowerCase());
+      if (propio) {
+        const pactadoAllIn = propio.price * (1 + (propio.iva || 0) / 100);
+        if (c.allIn > pactadoAllIn * 1.01) agreementNotes += `<p class="insight insight-info">⚠ <strong>${c.provider}</strong> te cotizó ${m.label} a $${fmt(c.allIn)}, por encima de tu acuerdo marco vigente a $${fmt(pactadoAllIn)} — reclama el precio pactado.</p>`;
+      }
+      acuerdos.filter(a => a.provider.toLowerCase() !== c.provider.toLowerCase()).forEach(a => {
+        const pactadoAllIn = a.price * (1 + (a.iva || 0) / 100);
+        agreementNotes += `<p class="insight insight-info">También tienes acuerdo marco vigente con <strong>${a.provider}</strong> para ${m.label} a $${fmt(pactadoAllIn)} — vale la pena pedirle cotización antes de decidir.</p>`;
+      });
     });
     out += '</tbody></table></div>';
+    out += agreementNotes;
 
     // Un solo proveedor (que cubra TODO el pedido) vs combinar
     const allMaterialKeys = materials.map(m => m.key);
@@ -1101,19 +1345,28 @@ async function registrarResultado(id) {
 
 /* ---------- Proveedores ---------- */
 
+async function saveProviderMeta(id, field, value) {
+  await fetch(`${API}/providers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) });
+}
+
 function renderProviders(providers) {
   const area = document.getElementById('providers-area');
   if (providers.length === 0) { area.innerHTML = '<p class="empty">Aún no tienes proveedores guardados.</p>'; return; }
-  const totalSpend = providers.reduce((s, p) => s + (p.spend || 0), 0);
-  let html = '<table><thead><tr><th>Proveedor</th><th>Pedidos</th><th>% a tiempo</th><th>Calidad</th><th>Gasto acumulado</th><th>% de tu gasto</th><th></th></tr></thead><tbody>';
+  let html = '<p class="hint">Guarda el NIT, dirección y categoría de cada proveedor una sola vez — quedan disponibles para tus órdenes de compra formales. Se guardan solos al salir del campo.</p>';
+  html += '<div class="table-scroll"><table><thead><tr><th>Proveedor</th><th>NIT</th><th>Categoría</th><th>Dirección</th><th>Pedidos</th><th>% a tiempo</th><th>Calidad</th><th>Gasto acumulado</th><th>% de tu gasto</th><th></th></tr></thead><tbody>';
   providers.forEach(p => {
     const st = p.stats;
-    const pct = totalSpend > 0 ? ((p.spend || 0) / totalSpend) * 100 : 0;
+    const pct = p.participacionPct != null ? p.participacionPct : 0;
     const digits = (p.phone || '').replace(/\D/g, '');
     const label = st ? (st.qualityAvg >= 85 ? 'Buena' : st.qualityAvg >= 60 ? 'Regular' : 'Baja') : '—';
-    html += `<tr><td>${p.name}</td><td>${st ? st.orders : '—'}</td><td>${st ? fmt(st.onTimePct) + '%' : 'Sin historial'}</td><td>${label}</td><td>$${fmt(p.spend || 0)}</td><td>${totalSpend > 0 ? fmtPct(pct) + '%' : '—'}</td><td>${digits ? `<a class="btn-whatsapp" href="https://wa.me/${digits}" target="_blank" rel="noopener">Escribir</a>` : ''}</td></tr>`;
+    html += `<tr><td><strong>${p.name}</strong></td>
+      <td><input type="text" value="${(p.nit || '').replace(/"/g, '&quot;')}" placeholder="900.000.000-0" onchange="saveProviderMeta('${p.id}','nit',this.value)"></td>
+      <td><input type="text" value="${(p.categoria || '').replace(/"/g, '&quot;')}" placeholder="Ej: Tuberías" onchange="saveProviderMeta('${p.id}','categoria',this.value)"></td>
+      <td><input type="text" value="${(p.direccion || '').replace(/"/g, '&quot;')}" placeholder="Dirección" onchange="saveProviderMeta('${p.id}','direccion',this.value)"></td>
+      <td>${st ? st.orders : '—'}</td><td>${st ? fmt(st.onTimePct) + '%' : 'Sin historial'}</td><td>${label}</td><td>$${fmt(p.spend || 0)}</td><td>${pct > 0 ? fmtPct(pct) + '%' : '—'}</td>
+      <td>${digits ? `<a class="btn-whatsapp" href="https://wa.me/${digits}" target="_blank" rel="noopener">Escribir</a>` : ''}</td></tr>`;
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   area.innerHTML = html;
 }
 
@@ -1157,7 +1410,7 @@ toggleGarantiaCustom(); toggleGarantiaDiasCustom();
 
 (async function init() {
   await loadSettings();
-  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget(), loadMaterialAliases()]);
+  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget(), loadMaterialAliases(), loadObras(), loadAgreements()]);
   await loadQuotes();
 })();
 </script>
