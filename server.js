@@ -19,7 +19,12 @@ const DEFAULT_STATE = {
   ordersInProgress: [],
   completedOrders: [],
   materialAliases: [],
-  settings: { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8 }
+  obras: [],
+  agreements: [],
+  settings: {
+    costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8,
+    empresaNombre: '', empresaNit: '', empresaDireccion: ''
+  }
 };
 db.setState(Object.assign({}, DEFAULT_STATE, db.getState())).write();
 
@@ -93,7 +98,7 @@ function calcQuote(q, settings) {
 function ensureProvider(name, phone) {
   let p = db.get('providers').find(x => x.name.toLowerCase() === String(name).toLowerCase()).value();
   if (!p) {
-    p = { id: nanoid(), name, phone: phone || null, orders: 0, onTime: 0, late: 0, qualityGood: 0, qualityRegular: 0, qualityBad: 0, spend: 0 };
+    p = { id: nanoid(), name, phone: phone || null, nit: '', direccion: '', categoria: '', orders: 0, onTime: 0, late: 0, qualityGood: 0, qualityRegular: 0, qualityBad: 0, spend: 0 };
     db.get('providers').push(p).write();
   } else if (phone) {
     db.get('providers').find({ id: p.id }).assign({ phone }).write();
@@ -102,7 +107,7 @@ function ensureProvider(name, phone) {
 }
 
 function withProviderDefaults(p) {
-  return { orders: 0, onTime: 0, late: 0, qualityGood: 0, qualityRegular: 0, qualityBad: 0, spend: 0, ...p };
+  return { nit: '', direccion: '', categoria: '', orders: 0, onTime: 0, late: 0, qualityGood: 0, qualityRegular: 0, qualityBad: 0, spend: 0, ...p };
 }
 
 function providerStats(p) {
@@ -118,7 +123,7 @@ app.get('/api/settings', (req, res) => res.json(getSettings()));
 
 app.put('/api/settings', (req, res) => {
   const current = getSettings();
-  const fields = ['costoCapitalAnual', 'tolerancia', 'esRetenedor', 'pctAnticipado', 'pctDisparo'];
+  const fields = ['costoCapitalAnual', 'tolerancia', 'esRetenedor', 'pctAnticipado', 'pctDisparo', 'toleranciaCompletitud', 'empresaNombre', 'empresaNit', 'empresaDireccion'];
   const updates = {};
   fields.forEach(f => { if (req.body[f] != null) updates[f] = req.body[f]; });
   const merged = { ...current, ...updates };
@@ -134,7 +139,7 @@ app.get('/api/quotes', (req, res) => {
 });
 
 app.post('/api/quotes', (req, res) => {
-  const { provider, phone, pago, days, iva, transp, items, city, anticipoPct, declarante, reteicaPct, garantiaPct, garantiaDias } = req.body;
+  const { provider, phone, pago, days, iva, transp, items, city, anticipoPct, declarante, reteicaPct, garantiaPct, garantiaDias, obraId } = req.body;
 
   if (!provider || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Falta el proveedor o al menos un ítem con material, cantidad y precio.' });
@@ -169,6 +174,7 @@ app.post('/api/quotes', (req, res) => {
     reteicaPct: Number(reteicaPct) || 0,
     garantiaPct: Number(garantiaPct) || 0,
     garantiaDias: Number(garantiaDias) || 0,
+    obraId: obraId || null,
     items: cleanItems,
     createdAt: new Date().toISOString()
   };
@@ -188,7 +194,22 @@ app.delete('/api/quotes/:id', (req, res) => {
 
 app.get('/api/providers', (req, res) => {
   const providers = db.get('providers').value().map(withProviderDefaults);
-  res.json(providers.map(p => ({ ...p, stats: providerStats(p) })));
+  const totalSpend = providers.reduce((s, p) => s + (p.spend || 0), 0);
+  res.json(providers.map(p => ({ ...p, stats: providerStats(p), participacionPct: totalSpend > 0 ? ((p.spend || 0) / totalSpend) * 100 : 0 })));
+});
+
+app.put('/api/providers/:id', (req, res) => {
+  const { nit, direccion, categoria, phone } = req.body;
+  const ref = db.get('providers').find({ id: req.params.id });
+  if (!ref.value()) return res.status(404).json({ error: 'Proveedor no encontrado.' });
+  const updates = {};
+  if (nit != null) updates.nit = String(nit).trim();
+  if (direccion != null) updates.direccion = String(direccion).trim();
+  if (categoria != null) updates.categoria = String(categoria).trim();
+  if (phone != null) updates.phone = String(phone).trim();
+  ref.assign(updates).write();
+  const p = withProviderDefaults(ref.value());
+  res.json({ ...p, stats: providerStats(p) });
 });
 
 // ---------- Pedidos: marcar cotización como pedido, y registrar el resultado ----------
@@ -254,23 +275,24 @@ app.get('/api/budget', (req, res) => {
 });
 
 app.post('/api/budget', (req, res) => {
-  const { material, unidad, cantidadTotal } = req.body;
+  const { material, unidad, cantidadTotal, obraId } = req.body;
   const cantidad = Number(cantidadTotal);
   if (!material || isNaN(cantidad) || cantidad <= 0) {
     return res.status(400).json({ error: 'Completa material y una cantidad total mayor a 0.' });
   }
-  const item = { id: nanoid(), material: String(material).trim(), unidad: unidad ? String(unidad).trim() : '', cantidadTotal: cantidad };
+  const item = { id: nanoid(), material: String(material).trim(), unidad: unidad ? String(unidad).trim() : '', cantidadTotal: cantidad, obraId: obraId || null };
   db.get('budgetItems').push(item).write();
   res.status(201).json(item);
 });
 
 app.post('/api/budget/bulk', (req, res) => {
   const items = Array.isArray(req.body.items) ? req.body.items : [];
+  const obraId = req.body.obraId || null;
   const created = [];
   items.forEach(it => {
     const cantidad = Number(it.cantidad != null ? it.cantidad : it.cantidadTotal);
     if (!it.material || isNaN(cantidad) || cantidad <= 0) return;
-    const item = { id: nanoid(), material: String(it.material).trim(), unidad: it.unidad ? String(it.unidad).trim() : '', cantidadTotal: cantidad };
+    const item = { id: nanoid(), material: String(it.material).trim(), unidad: it.unidad ? String(it.unidad).trim() : '', cantidadTotal: cantidad, obraId };
     db.get('budgetItems').push(item).write();
     created.push(item);
   });
@@ -319,6 +341,55 @@ app.post('/api/material-aliases', (req, res) => {
 
 app.delete('/api/material-aliases/:id', (req, res) => {
   db.get('materialAliases').remove({ id: req.params.id }).write();
+  res.status(204).end();
+});
+
+// ---------- Obras/proyectos (para segmentar cotizaciones y presupuesto) ----------
+// Inspirado en el "control de presupuesto por obra" de plataformas de e-procurement
+// como IConstruye, pero sin forzar la complejidad: si no creas ninguna obra, todo
+// sigue funcionando junto como hasta ahora ("General").
+
+app.get('/api/obras', (req, res) => {
+  res.json(db.get('obras').value());
+});
+
+app.post('/api/obras', (req, res) => {
+  const nombre = String(req.body.nombre || '').trim();
+  if (!nombre) return res.status(400).json({ error: 'Escribe un nombre para la obra/proyecto.' });
+  const obra = { id: nanoid(), nombre };
+  db.get('obras').push(obra).write();
+  res.status(201).json(obra);
+});
+
+app.delete('/api/obras/:id', (req, res) => {
+  db.get('obras').remove({ id: req.params.id }).write();
+  res.status(204).end();
+});
+
+// ---------- Acuerdos marco / compra contra convenios ----------
+// Un precio pactado con un proveedor para un material, vigente por un periodo —
+// igual que "Compra contra Convenios" en las plataformas grandes de e-procurement.
+// Se muestra como precio de referencia en el comparador y avisa cuando el acuerdo
+// está por vencer, para renegociar a tiempo (esto último no lo vimos en la competencia).
+
+app.get('/api/agreements', (req, res) => {
+  res.json(db.get('agreements').value());
+});
+
+app.post('/api/agreements', (req, res) => {
+  const { provider, material, price, iva, vigenciaHasta } = req.body;
+  const priceNum = Number(price);
+  if (!provider || !material || !priceNum || priceNum <= 0 || !vigenciaHasta) {
+    return res.status(400).json({ error: 'Completa proveedor, material, precio pactado y fecha de vigencia.' });
+  }
+  const agreement = { id: nanoid(), provider: String(provider).trim(), material: String(material).trim(), price: priceNum, iva: Number(iva) || 0, vigenciaHasta };
+  db.get('agreements').push(agreement).write();
+  ensureProvider(provider, null);
+  res.status(201).json(agreement);
+});
+
+app.delete('/api/agreements/:id', (req, res) => {
+  db.get('agreements').remove({ id: req.params.id }).write();
   res.status(204).end();
 });
 

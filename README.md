@@ -102,6 +102,20 @@ Todas las sugerencias generadas con IA (fabricantes, ReteICA, extracción de pre
 
 ---
 
+## 8. Novedades adicionales — inspiradas en plataformas de e-procurement como IConstruye
+
+Después de investigar cómo funcionan plataformas grandes de compras para constructoras (IConstruye, presente en Colombia/Chile/México), se adaptaron sus mejores funciones a una versión ligera y económica, y se agregaron ideas que esas plataformas no tienen:
+
+- **Obras/proyectos**: opcional. Si manejas varias obras al tiempo, créalas en "Obras / proyectos" y selecciona la "obra activa" — así el presupuesto y las cotizaciones de cada obra no se mezclan. Si no creas ninguna, todo sigue junto como "General", igual que antes.
+- **Datos de tu empresa**: razón social, NIT y dirección (en "Ajustes de comparación"), usados para membretar tus órdenes de compra.
+- **Proveedores enriquecidos**: ahora puedes guardar el NIT, categoría y dirección de cada proveedor (en "Desempeño y gasto por proveedor"), y ver su % de participación sobre tu gasto total — igual que el "monitor de participación de proveedores" de las plataformas grandes.
+- **Orden de compra formal**: botón "Generar orden de compra" en cada cotización — abre un documento limpio y membretado (tu empresa + el proveedor + los ítems + totales) listo para imprimir o guardar como PDF, sin depender de ninguna plataforma externa.
+- **Acuerdos marco (compra contra convenios)**: si ya negociaste un precio fijo con un proveedor por un tiempo determinado, regístralo. El comparador lo usa para avisarte si una cotización nueva viene por encima de lo pactado (para que reclames el precio acordado) y te avisa cuándo el acuerdo está por vencer, para que renegocies a tiempo — esta alerta de vencimiento no la vimos en la competencia revisada.
+
+**Lo que decidimos NO copiar de las plataformas grandes, y por qué**: gestión de bodega/inventario, facturación electrónica integrada con la DIAN, flujos de aprobación multiusuario y un "monitor" de miles de proyectos de terceros. Son funciones que requieren infraestructura mucho más pesada (sistema de usuarios y roles, integraciones oficiales, una red de datos que no existe todavía) — construirlas a medias daría una falsa sensación de robustez. El diferencial de Nexobra frente a esas plataformas sigue siendo ser simple, económico y hecho a la medida del cumplimiento tributario y el tamaño de la pyme constructora colombiana.
+
+---
+
 ## Estructura del proyecto
 
 ```
