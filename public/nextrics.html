@@ -26,7 +26,7 @@
   .wrap { max-width: 920px; margin: 0 auto; padding: 26px 20px 70px; }
   a.back { color: var(--ink-soft); text-decoration: none; font-size: 14px; }
   header { border-bottom: 3px solid var(--ink); padding-bottom: 16px; margin: 12px 0 24px; }
-  header .brand { font-size: 13px; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
+  header .brand { font-size: 13px; color: var(--accent); font-weight: 700; margin-bottom: 4px; display:flex; align-items:center; gap:8px; }
   header h1 { font-size: 26px; margin: 0 0 4px; }
   header p { margin: 0; color: var(--ink-soft); }
   .card { background: var(--panel); border: 1px solid var(--line); padding: 20px; margin-bottom: 20px; }
@@ -37,14 +37,14 @@
   label { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:4px; }
   input { width:100%; padding:9px 10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit; font-size:15px; }
   input:focus { outline:2px solid var(--accent); outline-offset:1px; }
-  button { font:inherit; font-weight:600; cursor:pointer; border:none; padding:10px 16px; font-size:14px; }
+  button { font:inherit; font-weight:700; cursor:pointer; border:none; padding:10px 16px; font-size:14px; }
   .btn-primary { background: var(--ink); color: var(--panel); }
   .btn-primary:hover { background: var(--accent); }
   .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); padding:6px 10px; font-size:13px; }
   .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
   .project-list { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   .project-chip { border: 1px solid var(--line); padding: 8px 14px; cursor: pointer; font-size: 14px; background: var(--panel); }
-  .project-chip.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .project-chip.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
   .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 20px; }
   @media (max-width: 640px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
   .stat { background: var(--panel); padding: 18px; }
@@ -57,10 +57,12 @@
   .bar-fill.over { background: var(--accent); }
   .insight-card { border-left: 3px solid var(--accent); }
   .insight-card.ok { border-left-color: var(--good); }
-  .insight-card p { margin:0; font-size:15px; }
+  .insight-card p { margin:0 0 8px; font-size:15px; }
+  .insight-card p:last-child { margin-bottom: 0; }
   .insight-card strong { color: var(--accent); }
   .insight-card.ok strong { color: var(--good); }
   .empty { color: var(--ink-soft); font-size:14px; }
+  .hint { font-size:13px; color: var(--ink-soft); margin: 0 0 14px; }
   footer { color: var(--ink-soft); font-size:13px; margin-top:24px; text-align:center; }
 </style>
 </head>
@@ -68,7 +70,7 @@
 <div class="wrap">
   <a class="back" href="/">← Nexobra</a>
   <header>
-    <div class="brand" style="display:flex; align-items:center; gap:8px;"><img src="/icons/icon-192.png" alt="" width="18" height="18">NEXOBRA NEXTRICS</div>
+    <div class="brand"><img src="/icons/icon-192.png" alt="" width="18" height="18">NEXOBRA NEXTRICS</div>
     <h1>Salud financiera del proyecto</h1>
     <p>Crea un proyecto, ingresa sus números, y Nexobra Nextrics calcula margen, desviación y proyección de cierre.</p>
   </header>
@@ -88,13 +90,16 @@
   <div id="project-detail" style="display:none;">
     <div class="card">
       <h2>Datos del proyecto</h2>
+      <p class="hint">"Presupuesto de costos" es lo que a ti te cuesta construir (materiales, mano de obra) — no lo que le cobras al cliente. La diferencia con el contrato es tu margen. Si el cliente aprueba más cantidades de obra, regístralo en "Adiciones al contrato".</p>
       <div class="field-grid">
         <div><label for="f-contrato">Valor del contrato ($)</label><input id="f-contrato" type="number" min="0" step="any" oninput="calcAndSave()"></div>
-        <div><label for="f-presupuesto">Presupuesto total ($)</label><input id="f-presupuesto" type="number" min="0" step="any" oninput="calcAndSave()"></div>
+        <div><label for="f-adiciones">Adiciones al contrato ($)</label><input id="f-adiciones" type="number" min="0" step="any" oninput="calcAndSave()"></div>
+        <div><label for="f-presupuesto">Presupuesto de costos ($)</label><input id="f-presupuesto" type="number" min="0" step="any" oninput="calcAndSave()"></div>
         <div><label for="f-ejecutado">Ejecutado a la fecha ($)</label><input id="f-ejecutado" type="number" min="0" step="any" oninput="calcAndSave()"></div>
-        <div><label for="f-comprometido">Comprometido / por pagar ($)</label><input id="f-comprometido" type="number" min="0" step="any" oninput="calcAndSave()"></div>
         <div><label for="f-pagado">Pagado hasta hoy ($)</label><input id="f-pagado" type="number" min="0" step="any" oninput="calcAndSave()"></div>
         <div><label for="f-avance">Avance físico de la obra (%)</label><input id="f-avance" type="number" min="0" max="100" step="any" oninput="calcAndSave()"></div>
+        <div><label for="f-fecha-inicio">Fecha de inicio</label><input id="f-fecha-inicio" type="date" oninput="calcAndSave()"></div>
+        <div><label for="f-duracion">Duración del contrato (días)</label><input id="f-duracion" type="number" min="0" step="1" oninput="calcAndSave()"></div>
       </div>
       <button class="btn-ghost" style="margin-top:14px;" onclick="deleteCurrentProject()">Eliminar este proyecto</button>
     </div>
@@ -103,7 +108,7 @@
 
     <div class="card insight-card" id="insight-card">
       <h2>Lectura de Nexobra Nextrics</h2>
-      <p id="insight-text"></p>
+      <div id="insight-text"></div>
     </div>
   </div>
 
@@ -144,11 +149,13 @@ function selectProject(id) {
 
   document.getElementById('project-detail').style.display = 'block';
   document.getElementById('f-contrato').value = p.contrato || '';
+  document.getElementById('f-adiciones').value = p.adiciones || '';
   document.getElementById('f-presupuesto').value = p.presupuesto || '';
   document.getElementById('f-ejecutado').value = p.ejecutado || '';
-  document.getElementById('f-comprometido').value = p.comprometido || '';
   document.getElementById('f-pagado').value = p.pagado || '';
   document.getElementById('f-avance').value = p.avance || '';
+  document.getElementById('f-fecha-inicio').value = p.fechaInicio || '';
+  document.getElementById('f-duracion').value = p.duracionDias || '';
   renderProjectList();
   renderStats(p);
 }
@@ -158,7 +165,7 @@ async function createProject() {
   if (!nombre) { alert('Ponle un nombre al proyecto.'); return; }
   const res = await fetch(`${API}/projects`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nombre, contrato: 0, presupuesto: 0, ejecutado: 0, comprometido: 0, pagado: 0, avance: 0 })
+    body: JSON.stringify({ nombre, contrato: 0, adiciones: 0, presupuesto: 0, ejecutado: 0, pagado: 0, avance: 0, fechaInicio: null, duracionDias: 0 })
   });
   const project = await res.json();
   document.getElementById('p-new-name').value = '';
@@ -169,38 +176,56 @@ async function createProject() {
 function calcAndSave() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(saveCurrentProject, 400);
-  // Vista previa instantánea mientras se escribe, sin esperar al servidor:
   const preview = {
     contrato: parseFloat(document.getElementById('f-contrato').value) || 0,
+    adiciones: parseFloat(document.getElementById('f-adiciones').value) || 0,
     presupuesto: parseFloat(document.getElementById('f-presupuesto').value) || 0,
     ejecutado: parseFloat(document.getElementById('f-ejecutado').value) || 0,
-    comprometido: parseFloat(document.getElementById('f-comprometido').value) || 0,
     pagado: parseFloat(document.getElementById('f-pagado').value) || 0,
-    avance: parseFloat(document.getElementById('f-avance').value) || 0
+    avance: parseFloat(document.getElementById('f-avance').value) || 0,
+    fechaInicio: document.getElementById('f-fecha-inicio').value || null,
+    duracionDias: parseFloat(document.getElementById('f-duracion').value) || 0
   };
   renderStats(computeLocally(preview));
 }
 
 function computeLocally(p) {
-  const margenPresupuestado = p.contrato > 0 ? ((p.contrato - p.presupuesto) / p.contrato) * 100 : 0;
+  const contratoTotal = p.contrato + p.adiciones;
+  const margenPresupuestado = contratoTotal > 0 ? ((contratoTotal - p.presupuesto) / contratoTotal) * 100 : 0;
   let proyeccionCosto = p.presupuesto, desviacionPct = 0;
   if (p.avance > 0) {
     proyeccionCosto = (p.ejecutado / p.avance) * 100;
     desviacionPct = p.presupuesto > 0 ? ((proyeccionCosto - p.presupuesto) / p.presupuesto) * 100 : 0;
   }
-  const margenProyectado = p.contrato > 0 ? ((p.contrato - proyeccionCosto) / p.contrato) * 100 : 0;
-  return { ...p, margenPresupuestado, margenProyectado, desviacionPct, porCobrar: p.contrato - p.pagado, porPagar: p.comprometido };
+  const margenProyectado = contratoTotal > 0 ? ((contratoTotal - proyeccionCosto) / contratoTotal) * 100 : 0;
+
+  let fechaFinEstimada = null, diasTranscurridos = null, avanceEsperado = null, atrasoCronograma = null;
+  if (p.fechaInicio && p.duracionDias > 0) {
+    const inicio = new Date(p.fechaInicio + 'T00:00:00');
+    if (!isNaN(inicio.getTime())) {
+      const fin = new Date(inicio.getTime() + p.duracionDias * 86400000);
+      fechaFinEstimada = fin.toISOString().slice(0, 10);
+      const transcurridosRaw = Math.floor((Date.now() - inicio.getTime()) / 86400000);
+      diasTranscurridos = Math.max(0, Math.min(p.duracionDias, transcurridosRaw));
+      avanceEsperado = (diasTranscurridos / p.duracionDias) * 100;
+      atrasoCronograma = p.avance - avanceEsperado;
+    }
+  }
+
+  return { ...p, contratoTotal, margenPresupuestado, margenProyectado, desviacionPct, porCobrar: contratoTotal - p.pagado, fechaFinEstimada, diasTranscurridos, avanceEsperado, atrasoCronograma };
 }
 
 async function saveCurrentProject() {
   if (!currentId) return;
   const body = {
     contrato: parseFloat(document.getElementById('f-contrato').value) || 0,
+    adiciones: parseFloat(document.getElementById('f-adiciones').value) || 0,
     presupuesto: parseFloat(document.getElementById('f-presupuesto').value) || 0,
     ejecutado: parseFloat(document.getElementById('f-ejecutado').value) || 0,
-    comprometido: parseFloat(document.getElementById('f-comprometido').value) || 0,
     pagado: parseFloat(document.getElementById('f-pagado').value) || 0,
-    avance: parseFloat(document.getElementById('f-avance').value) || 0
+    avance: parseFloat(document.getElementById('f-avance').value) || 0,
+    fechaInicio: document.getElementById('f-fecha-inicio').value || null,
+    duracionDias: parseFloat(document.getElementById('f-duracion').value) || 0
   };
   const res = await fetch(`${API}/projects/${currentId}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
@@ -224,7 +249,7 @@ function renderStats(p) {
   const margenClass = p.margenProyectado < p.margenPresupuestado - 1 ? 'alert' : 'ok';
   const ejecPct = p.presupuesto > 0 ? (p.ejecutado / p.presupuesto) * 100 : 0;
 
-  grid.innerHTML = `
+  let html = `
     <div class="stat"><div class="label">Margen presupuestado</div><div class="value">${p.margenPresupuestado.toFixed(1)}%</div></div>
     <div class="stat"><div class="label">Margen proyectado al cierre</div><div class="value ${margenClass}">${p.margenProyectado.toFixed(1)}%</div></div>
     <div class="stat"><div class="label">Desviación de costo vs. avance</div><div class="value ${desvClass}">${p.desviacionPct >= 0 ? '+' : ''}${p.desviacionPct.toFixed(1)}%</div></div>
@@ -232,21 +257,39 @@ function renderStats(p) {
       <div class="bar-track"><div class="bar-fill ${ejecPct > 100 ? 'over' : ''}" style="width:${Math.min(100, ejecPct)}%"></div></div>
     </div>
     <div class="stat"><div class="label">Por cobrar al cliente</div><div class="value">${fmtM(p.porCobrar)}</div></div>
-    <div class="stat"><div class="label">Comprometido por pagar</div><div class="value">${fmtM(p.porPagar)}</div></div>
   `;
+
+  if (p.fechaFinEstimada) {
+    const cronoClass = p.atrasoCronograma < -5 ? 'alert' : 'ok';
+    html += `<div class="stat"><div class="label">Avance esperado (cronograma)</div><div class="value ${cronoClass}">${p.avanceEsperado.toFixed(0)}%</div></div>`;
+  }
+
+  grid.innerHTML = html;
 
   const insightCard = document.getElementById('insight-card');
   const insightText = document.getElementById('insight-text');
+  let parts = [];
+
   if (p.desviacionPct > 3) {
     insightCard.className = 'card insight-card';
-    insightText.innerHTML = `El costo está <strong>${p.desviacionPct.toFixed(1)}% por encima</strong> de lo presupuestado para el avance físico actual (${p.avance}%). Si el ritmo se mantiene, el margen podría caer de ${p.margenPresupuestado.toFixed(1)}% a <strong>${p.margenProyectado.toFixed(1)}%</strong> al cierre.`;
+    parts.push(`El costo está <strong>${p.desviacionPct.toFixed(1)}% por encima</strong> de lo presupuestado para el avance físico actual (${p.avance}%). Si el ritmo se mantiene, el margen podría caer de ${p.margenPresupuestado.toFixed(1)}% a <strong>${p.margenProyectado.toFixed(1)}%</strong> al cierre.`);
   } else if (p.avance > 0) {
     insightCard.className = 'card insight-card ok';
-    insightText.innerHTML = `El costo ejecutado está <strong>alineado</strong> con el avance físico (${p.avance}%). Margen proyectado de cierre: <strong>${p.margenProyectado.toFixed(1)}%</strong>.`;
+    parts.push(`El costo ejecutado está <strong>alineado</strong> con el avance físico (${p.avance}%). Margen proyectado de cierre: <strong>${p.margenProyectado.toFixed(1)}%</strong>.`);
   } else {
     insightCard.className = 'card insight-card';
-    insightText.innerHTML = 'Ingresa el avance físico de la obra para calcular la proyección de margen al cierre.';
+    parts.push('Ingresa el avance físico de la obra para calcular la proyección de margen al cierre.');
   }
+
+  if (p.fechaFinEstimada) {
+    if (p.atrasoCronograma < -5) {
+      parts.push(`Según el cronograma (inicio + duración), a la fecha ya deberías llevar <strong>${p.avanceEsperado.toFixed(0)}%</strong> de avance físico, pero llevas ${p.avance}% — vas <strong>atrasado</strong>. Fecha de fin estimada: ${p.fechaFinEstimada}.`);
+    } else {
+      parts.push(`El avance físico (${p.avance}%) va a buen ritmo frente al cronograma (esperado: ${p.avanceEsperado.toFixed(0)}%). Fecha de fin estimada: ${p.fechaFinEstimada}.`);
+    }
+  }
+
+  insightText.innerHTML = parts.map(t => `<p>${t}</p>`).join('');
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
