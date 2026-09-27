@@ -8,7 +8,19 @@ const FileSync = require('lowdb/adapters/FileSync');
 
 const adapter = new FileSync(path.join(__dirname, 'db.json'));
 const db = low(adapter);
-db.defaults({ quotes: [], providers: [], projects: [] }).write();
+
+// Fusiona con lo que ya exista en db.json (importante en producción: no queremos
+// perder cotizaciones/proyectos ya guardados solo porque agregamos colecciones nuevas).
+const DEFAULT_STATE = {
+  quotes: [],
+  providers: [],
+  projects: [],
+  budgetItems: [],
+  ordersInProgress: [],
+  completedOrders: [],
+  settings: { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15 }
+};
+db.setState(Object.assign({}, DEFAULT_STATE, db.getState())).write();
 
 const app = express();
 app.use(cors());
@@ -19,14 +31,109 @@ const PORT = process.env.PORT || 3000;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = 'claude-sonnet-5';
 
+const UVT_2025 = 49799; // valor referencial DIAN 2025 — verifica el vigente cada año
+const RETEFUENTE_BASE_UVT = 10;
+
+function getSettings() {
+  return db.get('settings').value() || DEFAULT_STATE.settings;
+}
+
+async function askClaude(prompt, maxTokens) {
+  if (!ANTHROPIC_API_KEY) {
+    const err = new Error('missing_key');
+    err.code = 'missing_key';
+    throw err;
+  }
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: maxTokens || 1000, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('Error de la API de Anthropic:', errText);
+    const err = new Error('api_error');
+    err.code = 'api_error';
+    throw err;
+  }
+  const data = await response.json();
+  const textBlock = (data.content || []).find(c => c.type === 'text');
+  const raw = textBlock ? textBlock.text : '';
+  const clean = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+// Calcula todos los valores derivados de una cotización: subtotales, IVA, costo
+// financiero del anticipo, y las retenciones colombianas (retefuente, ReteICA,
+// garantía técnica). Las retenciones NO cambian el costo total — solo a quién se
+// le paga cada peso — así que nunca alteran `total`, solo el neto al proveedor.
+function calcQuote(q, settings) {
+  const items = (q.items || []).map(it => ({ ...it, subtotal: (Number(it.qty) || 0) * (Number(it.price) || 0) }));
+  const subtotalItems = items.reduce((s, it) => s + it.subtotal, 0);
+  const ivaValue = subtotalItems * ((Number(q.iva) || 0) / 100);
+  const anticipoPct = Number(q.anticipoPct) || 0;
+  const anticipoMonto = subtotalItems * (anticipoPct / 100);
+  const days = Number(q.days) || 0;
+  const costoCapitalAnual = Number(settings.costoCapitalAnual) || 0;
+  const financeCost = anticipoMonto * (costoCapitalAnual / 100) * (days / 365);
+  const transp = Number(q.transp) || 0;
+  const total = subtotalItems + ivaValue + transp + financeCost;
+
+  const superaBaseRetefuente = subtotalItems >= (UVT_2025 * RETEFUENTE_BASE_UVT);
+  const retefuentePct = q.declarante === 'no' ? 3.5 : 2.5;
+  const retefuenteMonto = (settings.esRetenedor && superaBaseRetefuente) ? subtotalItems * (retefuentePct / 100) : 0;
+  const reteicaMonto = subtotalItems * ((Number(q.reteicaPct) || 0) / 100);
+  const garantiaMonto = total * ((Number(q.garantiaPct) || 0) / 100);
+  const netoInmediatoProveedor = total - retefuenteMonto - reteicaMonto - garantiaMonto;
+
+  return { ...q, items, subtotalItems, ivaValue, transp, anticipoMonto, financeCost, total, retefuentePct, retefuenteMonto, reteicaMonto, garantiaMonto, netoInmediatoProveedor, superaBaseRetefuente };
+}
+
+function ensureProvider(name, phone) {
+  let p = db.get('providers').find(x => x.name.toLowerCase() === String(name).toLowerCase()).value();
+  if (!p) {
+    p = { id: nanoid(), name, phone: phone || null, orders: 0, onTime: 0, late: 0, qualityGood: 0, qualityRegular: 0, qualityBad: 0, spend: 0 };
+    db.get('providers').push(p).write();
+  } else if (phone) {
+    db.get('providers').find({ id: p.id }).assign({ phone }).write();
+  }
+  return p;
+}
+
+function withProviderDefaults(p) {
+  return { orders: 0, onTime: 0, late: 0, qualityGood: 0, qualityRegular: 0, qualityBad: 0, spend: 0, ...p };
+}
+
+function providerStats(p) {
+  if (!p.orders) return null;
+  const onTimePct = (p.onTime / p.orders) * 100;
+  const qualityAvg = ((p.qualityGood * 100) + (p.qualityRegular * 60) + (p.qualityBad * 20)) / p.orders;
+  return { orders: p.orders, onTimePct, qualityAvg, spend: p.spend || 0 };
+}
+
+// ---------- Ajustes de comparación ----------
+
+app.get('/api/settings', (req, res) => res.json(getSettings()));
+
+app.put('/api/settings', (req, res) => {
+  const current = getSettings();
+  const fields = ['costoCapitalAnual', 'tolerancia', 'esRetenedor', 'pctAnticipado', 'pctDisparo'];
+  const updates = {};
+  fields.forEach(f => { if (req.body[f] != null) updates[f] = req.body[f]; });
+  const merged = { ...current, ...updates };
+  db.set('settings', merged).write();
+  res.json(merged);
+});
+
 // ---------- Nexobra Mercado: cotizaciones (multi-ítem) ----------
 
 app.get('/api/quotes', (req, res) => {
-  res.json(db.get('quotes').value());
+  const settings = getSettings();
+  res.json(db.get('quotes').value().map(q => calcQuote(q, settings)));
 });
 
 app.post('/api/quotes', (req, res) => {
-  const { provider, phone, pago, days, iva, transp, items } = req.body;
+  const { provider, phone, pago, days, iva, transp, items, city, anticipoPct, declarante, reteicaPct, garantiaPct, garantiaDias } = req.body;
 
   if (!provider || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Falta el proveedor o al menos un ítem con material, cantidad y precio.' });
@@ -36,7 +143,10 @@ app.post('/api/quotes', (req, res) => {
     .map(it => {
       const qty = Number(it.qty) || 0;
       const price = Number(it.price) || 0;
-      return { material: (it.material || '').trim(), qty, price, subtotal: qty * price };
+      let disponible = it.disponible === '' || it.disponible == null ? qty : Number(it.disponible);
+      if (isNaN(disponible)) disponible = qty;
+      if (disponible > qty) disponible = qty;
+      return { material: (it.material || '').trim(), qty, price, disponible, subtotal: qty * price };
     })
     .filter(it => it.material && it.qty > 0 && it.price >= 0);
 
@@ -44,34 +154,28 @@ app.post('/api/quotes', (req, res) => {
     return res.status(400).json({ error: 'Agrega al menos un ítem válido (material, cantidad y precio).' });
   }
 
-  const ivaPct = Number(iva) || 0;
-  const transpValue = Number(transp) || 0;
-  const subtotalItems = cleanItems.reduce((sum, it) => sum + it.subtotal, 0);
-  const ivaValue = subtotalItems * (ivaPct / 100);
-  const total = subtotalItems + ivaValue + transpValue;
-
   const quote = {
     id: nanoid(),
     provider,
-    phone: phone || null, pago: pago || null, days: days || null,
-    iva: ivaPct, transp: transpValue,
+    phone: phone || null,
+    pago: pago || null,
+    days: days || null,
+    iva: Number(iva) || 0,
+    transp: Number(transp) || 0,
+    city: city || null,
+    anticipoPct: Number(anticipoPct) || 0,
+    declarante: declarante === 'no' ? 'no' : 'si',
+    reteicaPct: Number(reteicaPct) || 0,
+    garantiaPct: Number(garantiaPct) || 0,
+    garantiaDias: Number(garantiaDias) || 0,
     items: cleanItems,
-    subtotalItems, ivaValue, total,
     createdAt: new Date().toISOString()
   };
 
   db.get('quotes').push(quote).write();
+  ensureProvider(provider, phone || null);
 
-  if (phone) {
-    const existing = db.get('providers').find({ name: provider }).value();
-    if (existing) {
-      db.get('providers').find({ name: provider }).assign({ phone }).write();
-    } else {
-      db.get('providers').push({ id: nanoid(), name: provider, phone }).write();
-    }
-  }
-
-  res.status(201).json(quote);
+  res.status(201).json(calcQuote(quote, getSettings()));
 });
 
 app.delete('/api/quotes/:id', (req, res) => {
@@ -79,10 +183,102 @@ app.delete('/api/quotes/:id', (req, res) => {
   res.status(204).end();
 });
 
-// ---------- Proveedores ----------
+// ---------- Proveedores: historial real de cumplimiento y gasto ----------
 
 app.get('/api/providers', (req, res) => {
-  res.json(db.get('providers').value());
+  const providers = db.get('providers').value().map(withProviderDefaults);
+  res.json(providers.map(p => ({ ...p, stats: providerStats(p) })));
+});
+
+// ---------- Pedidos: marcar cotización como pedido, y registrar el resultado ----------
+
+app.get('/api/orders/in-progress', (req, res) => {
+  res.json(db.get('ordersInProgress').value());
+});
+
+app.get('/api/orders/completed', (req, res) => {
+  res.json(db.get('completedOrders').value());
+});
+
+app.post('/api/orders', (req, res) => {
+  const { quoteId } = req.body;
+  const quote = db.get('quotes').find({ id: quoteId }).value();
+  if (!quote) return res.status(404).json({ error: 'No se encontró la cotización.' });
+
+  const calc = calcQuote(quote, getSettings());
+  const entry = {
+    id: nanoid(),
+    quoteId: quote.id,
+    provider: quote.provider,
+    resumen: quote.items.map(it => `${it.qty} ${it.material}`).join(', '),
+    items: quote.items.map(it => ({ material: it.material, qty: it.qty, price: it.price })),
+    total: calc.total,
+    diasPrometidos: Number(quote.days) || 0,
+    fechaPedido: new Date().toISOString().slice(0, 10)
+  };
+  db.get('ordersInProgress').push(entry).write();
+  res.status(201).json(entry);
+});
+
+app.post('/api/orders/:id/complete', (req, res) => {
+  const order = db.get('ordersInProgress').find({ id: req.params.id }).value();
+  if (!order) return res.status(404).json({ error: 'No se encontró el pedido en curso.' });
+
+  const onTime = !!req.body.onTime;
+  const quality = ['buena', 'regular', 'mala'].includes(req.body.quality) ? req.body.quality : 'buena';
+
+  const prov = ensureProvider(order.provider, null);
+  const updates = {
+    orders: (prov.orders || 0) + 1,
+    onTime: (prov.onTime || 0) + (onTime ? 1 : 0),
+    late: (prov.late || 0) + (onTime ? 0 : 1),
+    qualityGood: (prov.qualityGood || 0) + (quality === 'buena' ? 1 : 0),
+    qualityRegular: (prov.qualityRegular || 0) + (quality === 'regular' ? 1 : 0),
+    qualityBad: (prov.qualityBad || 0) + (quality === 'mala' ? 1 : 0),
+    spend: (prov.spend || 0) + order.total
+  };
+  db.get('providers').find({ id: prov.id }).assign(updates).write();
+
+  const completed = { id: nanoid(), provider: order.provider, items: order.items, total: order.total, onTime, quality, fecha: new Date().toISOString().slice(0, 10) };
+  db.get('completedOrders').push(completed).write();
+  db.get('ordersInProgress').remove({ id: order.id }).write();
+
+  res.json(completed);
+});
+
+// ---------- Presupuesto de obra y compra anticipada ----------
+
+app.get('/api/budget', (req, res) => {
+  res.json(db.get('budgetItems').value());
+});
+
+app.post('/api/budget', (req, res) => {
+  const { material, unidad, cantidadTotal } = req.body;
+  const cantidad = Number(cantidadTotal);
+  if (!material || isNaN(cantidad) || cantidad <= 0) {
+    return res.status(400).json({ error: 'Completa material y una cantidad total mayor a 0.' });
+  }
+  const item = { id: nanoid(), material: String(material).trim(), unidad: unidad ? String(unidad).trim() : '', cantidadTotal: cantidad };
+  db.get('budgetItems').push(item).write();
+  res.status(201).json(item);
+});
+
+app.post('/api/budget/bulk', (req, res) => {
+  const items = Array.isArray(req.body.items) ? req.body.items : [];
+  const created = [];
+  items.forEach(it => {
+    const cantidad = Number(it.cantidad != null ? it.cantidad : it.cantidadTotal);
+    if (!it.material || isNaN(cantidad) || cantidad <= 0) return;
+    const item = { id: nanoid(), material: String(it.material).trim(), unidad: it.unidad ? String(it.unidad).trim() : '', cantidadTotal: cantidad };
+    db.get('budgetItems').push(item).write();
+    created.push(item);
+  });
+  res.status(201).json({ count: created.length, items: created });
+});
+
+app.delete('/api/budget/:id', (req, res) => {
+  db.get('budgetItems').remove({ id: req.params.id }).write();
+  res.status(204).end();
 });
 
 // ---------- Nexobra Nextrics: proyectos financieros ----------
@@ -173,17 +369,10 @@ app.delete('/api/projects/:id', (req, res) => {
 
 app.post('/api/extract', async (req, res) => {
   const { text } = req.body;
-  if (!text || !text.trim()) {
-    return res.status(400).json({ error: 'Falta el texto de la cotización.' });
-  }
-  if (!ANTHROPIC_API_KEY) {
-    return res.status(501).json({
-      error: 'La extracción con IA no está configurada. Agrega ANTHROPIC_API_KEY en tu archivo .env.'
-    });
-  }
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Falta el texto de la cotización.' });
 
-  const prompt = `Extrae de este texto de una cotización de construcción los datos generales y CADA material cotizado. Responde ÚNICAMENTE con un objeto JSON, sin texto adicional ni backticks, con esta forma exacta:
-{"provider": string o null, "phone": string o null (solo dígitos), "pago": string o null, "days": número o null, "iva": número o null (porcentaje), "transp": número o null, "items": [{"material": string, "qty": número, "price": número (precio unitario sin símbolos)}]}
+  const prompt = `Extrae de este texto de una cotización de construcción en Colombia los datos generales y CADA material cotizado. Responde ÚNICAMENTE con un objeto JSON, sin texto adicional ni backticks, con esta forma exacta:
+{"provider": string o null, "phone": string o null (solo dígitos), "pago": string o null, "days": número o null, "iva": número o null (porcentaje), "transp": número o null, "city": string o null (ciudad desde la que despachan), "anticipoPct": número o null (porcentaje de anticipo, 0 si no piden), "declarante": "si" o "no" (si se menciona si el proveedor es declarante de renta; si no se menciona usa "si"), "reteicaPct": número o null (si se menciona tarifa de ReteICA), "garantiaPct": número o null (retención de garantía técnica si se menciona), "garantiaDias": número o null (plazo de liberación de la garantía si se menciona), "items": [{"material": string, "qty": número, "price": número (precio unitario sin símbolos), "disponible": número o null (unidades disponibles ahora; si dice stock completo usa qty; si no se menciona, null)}]}
 
 Incluye un elemento en "items" por cada material distinto que aparezca cotizado en el texto, aunque haya varios (ej: tubos, tomas, lámparas serían 3 ítems separados).
 
@@ -191,35 +380,73 @@ Texto:
 ${text}`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Error de la API de Anthropic:', errText);
-      return res.status(502).json({ error: 'La API de Anthropic devolvió un error.' });
-    }
-
-    const data = await response.json();
-    const textBlock = (data.content || []).find(c => c.type === 'text');
-    const raw = textBlock ? textBlock.text : '';
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    const parsed = await askClaude(prompt, 1200);
     res.json(parsed);
   } catch (err) {
+    if (err.code === 'missing_key') return res.status(501).json({ error: 'La extracción con IA no está configurada. Agrega ANTHROPIC_API_KEY en tu archivo .env.' });
     console.error('Error extrayendo cotización:', err);
     res.status(500).json({ error: 'No se pudo estructurar el texto.' });
+  }
+});
+
+// ---------- IA: fabricantes/distribuidores conocidos para un material ----------
+
+app.post('/api/ai/manufacturers', async (req, res) => {
+  const { material, city } = req.body;
+  if (!material || !material.trim()) return res.status(400).json({ error: 'Falta el material.' });
+
+  const prompt = `Dame hasta 6 nombres de empresas fabricantes o distribuidores mayoristas ampliamente conocidos en Colombia ` +
+    `para el material de construcción "${material}"${city ? ' (idealmente con presencia u operación cerca de ' + city + ')' : ''}. ` +
+    `Responde SOLO un JSON array de strings con los nombres de las empresas, sin URLs, teléfonos ni descripciones. ` +
+    `Usa únicamente nombres de empresas reales y conocidas que sepas que existen en Colombia para ese tipo de material; ` +
+    `si no conoces ninguna con confianza, responde un array vacío [].`;
+
+  try {
+    const parsed = await askClaude(prompt, 400);
+    res.json({ names: Array.isArray(parsed) ? parsed : [] });
+  } catch (err) {
+    if (err.code === 'missing_key') return res.status(501).json({ error: 'La sugerencia con IA no está configurada. Agrega ANTHROPIC_API_KEY en tu archivo .env.' });
+    res.status(500).json({ error: 'No se pudo consultar la IA en este momento.' });
+  }
+});
+
+// ---------- IA: referencia aproximada de ReteICA por ciudad ----------
+
+app.post('/api/ai/reteica', async (req, res) => {
+  const { city } = req.body;
+  if (!city || !city.trim()) return res.status(400).json({ error: 'Falta la ciudad.' });
+
+  const prompt = `Da una referencia MUY aproximada y no oficial de la tarifa de ReteICA (retención de industria y comercio) ` +
+    `que suele aplicarse a la compra/comercio de materiales de construcción en el municipio de "${city}", Colombia. ` +
+    `Responde SOLO JSON: {"rango": "texto corto con el rango aproximado, por ejemplo '3 a 7 por mil', o null si no tienes ninguna referencia confiable para ese municipio", ` +
+    `"nota": "una frase corta recordando que es solo referencial y debe confirmarse con el proveedor o la Secretaría de Hacienda municipal"}`;
+
+  try {
+    const parsed = await askClaude(prompt, 300);
+    res.json(parsed);
+  } catch (err) {
+    if (err.code === 'missing_key') return res.status(501).json({ error: 'La sugerencia con IA no está configurada. Agrega ANTHROPIC_API_KEY en tu archivo .env.' });
+    res.status(500).json({ error: 'No se pudo consultar la IA en este momento.' });
+  }
+});
+
+// ---------- IA: interpretar texto de un presupuesto de obra (ej. extraído de un PDF) ----------
+
+app.post('/api/ai/budget-extract', async (req, res) => {
+  const { text } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Falta el texto del presupuesto.' });
+
+  const prompt = `Este es un fragmento de texto extraído automáticamente de un PDF de presupuesto de obra de construcción ` +
+    `(las columnas pueden haber quedado desordenadas). Extrae los ítems de MATERIALES (ignora mano de obra, ` +
+    `equipos, transporte interno y subtotales) como un JSON array de objetos {"material": string, "unidad": string, "cantidad": número}. ` +
+    `Si un ítem no tiene cantidad clara o no es un material físico, no lo incluyas. Si no encuentras ítems claros, responde [].\n\nTexto:\n${text}`;
+
+  try {
+    const parsed = await askClaude(prompt, 2000);
+    res.json({ items: Array.isArray(parsed) ? parsed : [] });
+  } catch (err) {
+    if (err.code === 'missing_key') return res.status(501).json({ error: 'La interpretación con IA no está configurada. Agrega ANTHROPIC_API_KEY en tu archivo .env.' });
+    res.status(500).json({ error: 'No se pudo interpretar el texto en este momento.' });
   }
 });
 
