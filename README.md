@@ -116,6 +116,15 @@ Después de investigar cómo funcionan plataformas grandes de compras para const
 
 ---
 
+## 9. Editar cotizaciones, pedidos parciales, reconocimiento por marca y grupos empresariales
+
+- **Editar cotización**: cada cotización tiene un botón "Editar cotización" que recarga sus datos en el formulario (datos básicos, pago y condiciones, garantía técnica y los materiales cotizados) para corregirla o agregar/quitar ítems, en vez de tener que borrarla y crearla de nuevo.
+- **Pedir solo una parte de una cotización**: cada material de una cotización tiene una casilla de selección. Si al final no vas a comprar el pedido completo, desmarca lo que no vas a pedir — el total se recalcula solo con lo marcado, y así se genera la orden de compra, el mensaje de WhatsApp y el "pedido" correspondiente. La cotización original nunca se modifica: queda intacta como referencia de lo que te cotizaron.
+- **Reconocimiento de materiales sin importar la marca**: la detección de "¿son el mismo material?" ahora ignora marcas/fabricantes conocidos (Pavco Wavin, Tubosa Coex, Apolo, Celco, Gerfor, Argos, Cemex, etc.) y diferencias de formato de unidades ("6m" vs "6 m"), para reconocer que, por ejemplo, "Tubo sanitario 2\" x 6 m Pavco Wavin" y "Tubo sanitario 2\" x 6m Tubosa Coex" son el mismo tubo con distinta marca — siempre pidiendo tu confirmación antes de unificarlos, igual que antes.
+- **Grupos empresariales y varias empresas/NIT**: si varias empresas del mismo grupo cotizan por separado (cada una a su propio NIT) pero comparten proveedores, ahora puedes crear un login de "grupo empresarial" (usuario y contraseña) y, dentro de esa sesión, dar de alta cada empresa del grupo con su razón social, NIT y dirección. Cada empresa segmenta sus propias obras, cotizaciones y presupuesto, pero **todas comparten el mismo listado de proveedores** de la aplicación. Las órdenes de compra usan automáticamente los datos de la empresa activa. Si más adelante necesitas vincular otro grupo empresarial totalmente ajeno (con su propia contraseña, sin compartir empresas ni obras — solo el listado de proveedores), puedes crearlo desde la pantalla de inicio de sesión ("Vincular otro grupo empresarial"). Mientras no crees ningún grupo, la app sigue funcionando sin pedir login, como antes.
+
+---
+
 ## Estructura del proyecto
 
 ```

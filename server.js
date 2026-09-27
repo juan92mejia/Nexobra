@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 const { nanoid } = require('nanoid');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
@@ -21,6 +22,9 @@ const DEFAULT_STATE = {
   materialAliases: [],
   obras: [],
   agreements: [],
+  groups: [],
+  empresas: [],
+  sessions: [],
   settings: {
     costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8,
     empresaNombre: '', empresaNit: '', empresaDireccion: ''
@@ -42,6 +46,40 @@ const RETEFUENTE_BASE_UVT = 10;
 
 function getSettings() {
   return db.get('settings').value() || DEFAULT_STATE.settings;
+}
+
+// ---------- Autenticación por grupo empresarial ----------
+// Un "grupo empresarial" (ej. un holding) inicia sesión con un solo usuario/contraseña.
+// Dentro de ese login puede tener varias empresas (cada una con su propio NIT), y cada
+// empresa segmenta sus propias obras/cotizaciones/presupuesto — pero los proveedores se
+// comparten en toda la aplicación. Si más adelante se necesita vincular OTRO grupo
+// empresarial ajeno, se crea con su propio usuario/contraseña independiente.
+// Mientras no exista ningún grupo creado, la app funciona sin pedir login (modo simple,
+// para no bloquear a quien la usa como una sola empresa).
+
+function hashPassword(password, salt) {
+  salt = salt || crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  return { salt, hash };
+}
+function verifyPassword(password, salt, hash) {
+  try {
+    const check = crypto.scryptSync(String(password || ''), salt, 64).toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(check, 'hex'), Buffer.from(hash, 'hex'));
+  } catch (e) { return false; }
+}
+function getSession(req) {
+  const token = req.headers['x-session-token'];
+  if (!token) return null;
+  return db.get('sessions').find({ token }).value() || null;
+}
+function empresaIdsForGroup(groupId) {
+  return db.get('empresas').filter({ groupId }).map(e => e.id).value();
+}
+function scopeByGroup(list, req) {
+  if (!req.groupId) return list;
+  const ids = empresaIdsForGroup(req.groupId);
+  return list.filter(x => !x.empresaId || ids.includes(x.empresaId));
 }
 
 async function askClaude(prompt, maxTokens) {
@@ -117,6 +155,113 @@ function providerStats(p) {
   return { orders: p.orders, onTimePct, qualityAvg, spend: p.spend || 0 };
 }
 
+// Exige sesión válida en toda /api excepto /api/auth/* — pero solo una vez que exista
+// al menos un grupo empresarial creado. Si nadie ha configurado un login todavía, la
+// app sigue funcionando abierta (modo simple, como antes de este cambio).
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth/')) return next();
+  const hasGroups = db.get('groups').value().length > 0;
+  if (!hasGroups) return next();
+  const session = getSession(req);
+  if (!session) return res.status(401).json({ error: 'Sesión no válida. Inicia sesión de nuevo.' });
+  req.groupId = session.groupId;
+  next();
+});
+
+app.get('/api/auth/status', (req, res) => {
+  res.json({ hasGroups: db.get('groups').value().length > 0 });
+});
+
+app.post('/api/auth/setup', (req, res) => {
+  if (db.get('groups').value().length > 0) return res.status(400).json({ error: 'Ya existe un grupo empresarial configurado. Pide que te creen un usuario, o inicia sesión.' });
+  const { groupNombre, username, password, empresas } = req.body;
+  if (!groupNombre || !username || !password) return res.status(400).json({ error: 'Completa el nombre del grupo empresarial, usuario y contraseña.' });
+  if (String(password).length < 4) return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres.' });
+  const { salt, hash } = hashPassword(password);
+  const group = { id: nanoid(), nombre: String(groupNombre).trim(), username: String(username).trim().toLowerCase(), salt, hash };
+  db.get('groups').push(group).write();
+  const empresasCreadas = (Array.isArray(empresas) ? empresas : [])
+    .filter(e => e && e.nombre)
+    .map(e => ({ id: nanoid(), groupId: group.id, nombre: String(e.nombre).trim(), nit: String(e.nit || '').trim(), direccion: String(e.direccion || '').trim() }));
+  empresasCreadas.forEach(e => db.get('empresas').push(e).write());
+  const token = nanoid();
+  db.get('sessions').push({ token, groupId: group.id, createdAt: new Date().toISOString() }).write();
+  res.status(201).json({ token, group: { id: group.id, nombre: group.nombre }, empresas: empresasCreadas });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  const group = db.get('groups').find(g => g.username === String(username || '').trim().toLowerCase()).value();
+  if (!group || !verifyPassword(password, group.salt, group.hash)) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+  const token = nanoid();
+  db.get('sessions').push({ token, groupId: group.id, createdAt: new Date().toISOString() }).write();
+  const empresas = db.get('empresas').filter({ groupId: group.id }).value();
+  res.json({ token, group: { id: group.id, nombre: group.nombre }, empresas });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = req.headers['x-session-token'];
+  if (token) db.get('sessions').remove({ token }).write();
+  res.status(204).end();
+});
+
+app.post('/api/auth/groups', (req, res) => {
+  // Vincular otro grupo empresarial ajeno al actual — cada uno con su propio login independiente.
+  const { groupNombre, username, password, empresas } = req.body;
+  if (!groupNombre || !username || !password) return res.status(400).json({ error: 'Completa el nombre del grupo empresarial, usuario y contraseña.' });
+  if (String(password).length < 4) return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres.' });
+  const existing = db.get('groups').find(g => g.username === String(username).trim().toLowerCase()).value();
+  if (existing) return res.status(400).json({ error: 'Ese nombre de usuario ya existe. Elige otro.' });
+  const { salt, hash } = hashPassword(password);
+  const group = { id: nanoid(), nombre: String(groupNombre).trim(), username: String(username).trim().toLowerCase(), salt, hash };
+  db.get('groups').push(group).write();
+  const empresasCreadas = (Array.isArray(empresas) ? empresas : [])
+    .filter(e => e && e.nombre)
+    .map(e => ({ id: nanoid(), groupId: group.id, nombre: String(e.nombre).trim(), nit: String(e.nit || '').trim(), direccion: String(e.direccion || '').trim() }));
+  empresasCreadas.forEach(e => db.get('empresas').push(e).write());
+  res.status(201).json({ group: { id: group.id, nombre: group.nombre }, empresas: empresasCreadas });
+});
+
+app.get('/api/me', (req, res) => {
+  if (!req.groupId) return res.json({ group: null, empresas: [] });
+  const group = db.get('groups').find({ id: req.groupId }).value();
+  const empresas = db.get('empresas').filter({ groupId: req.groupId }).value();
+  res.json({ group: group ? { id: group.id, nombre: group.nombre } : null, empresas });
+});
+
+// ---------- Empresas dentro del grupo empresarial ----------
+// Cada empresa tiene su propio NIT/razón social para membretar cotizaciones y órdenes
+// de compra, pero todas comparten el mismo listado de proveedores de la aplicación.
+
+app.post('/api/empresas', (req, res) => {
+  if (!req.groupId) return res.status(400).json({ error: 'Inicia sesión para crear empresas dentro de un grupo empresarial.' });
+  const { nombre, nit, direccion } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'Escribe la razón social de la empresa.' });
+  const empresa = { id: nanoid(), groupId: req.groupId, nombre: String(nombre).trim(), nit: String(nit || '').trim(), direccion: String(direccion || '').trim() };
+  db.get('empresas').push(empresa).write();
+  res.status(201).json(empresa);
+});
+
+app.put('/api/empresas/:id', (req, res) => {
+  const ref = db.get('empresas').find({ id: req.params.id });
+  const empresa = ref.value();
+  if (!empresa || (req.groupId && empresa.groupId !== req.groupId)) return res.status(404).json({ error: 'Empresa no encontrada.' });
+  const { nombre, nit, direccion } = req.body;
+  const updates = {};
+  if (nombre != null) updates.nombre = String(nombre).trim();
+  if (nit != null) updates.nit = String(nit).trim();
+  if (direccion != null) updates.direccion = String(direccion).trim();
+  ref.assign(updates).write();
+  res.json(ref.value());
+});
+
+app.delete('/api/empresas/:id', (req, res) => {
+  const empresa = db.get('empresas').find({ id: req.params.id }).value();
+  if (!empresa || (req.groupId && empresa.groupId !== req.groupId)) return res.status(404).json({ error: 'Empresa no encontrada.' });
+  db.get('empresas').remove({ id: req.params.id }).write();
+  res.status(204).end();
+});
+
 // ---------- Ajustes de comparación ----------
 
 app.get('/api/settings', (req, res) => res.json(getSettings()));
@@ -135,11 +280,11 @@ app.put('/api/settings', (req, res) => {
 
 app.get('/api/quotes', (req, res) => {
   const settings = getSettings();
-  res.json(db.get('quotes').value().map(q => calcQuote(q, settings)));
+  res.json(scopeByGroup(db.get('quotes').value(), req).map(q => calcQuote(q, settings)));
 });
 
 app.post('/api/quotes', (req, res) => {
-  const { provider, phone, pago, days, iva, transp, items, city, anticipoPct, declarante, reteicaPct, garantiaPct, garantiaDias, obraId } = req.body;
+  const { provider, phone, pago, days, iva, transp, items, city, anticipoPct, declarante, reteicaPct, garantiaPct, garantiaDias, obraId, empresaId } = req.body;
 
   if (!provider || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Falta el proveedor o al menos un ítem con material, cantidad y precio.' });
@@ -175,6 +320,7 @@ app.post('/api/quotes', (req, res) => {
     garantiaPct: Number(garantiaPct) || 0,
     garantiaDias: Number(garantiaDias) || 0,
     obraId: obraId || null,
+    empresaId: empresaId || null,
     items: cleanItems,
     createdAt: new Date().toISOString()
   };
@@ -183,6 +329,49 @@ app.post('/api/quotes', (req, res) => {
   ensureProvider(provider, phone || null);
 
   res.status(201).json(calcQuote(quote, getSettings()));
+});
+
+// Editar una cotización ya guardada: datos básicos, pago/condiciones, garantía técnica
+// y los materiales cotizados (agregar/quitar ítems). Reemplaza el registro completo,
+// igual que crearla, pero conserva su id y fecha de creación original.
+app.put('/api/quotes/:id', (req, res) => {
+  const ref = db.get('quotes').find({ id: req.params.id });
+  const existing = ref.value();
+  if (!existing) return res.status(404).json({ error: 'No se encontró la cotización.' });
+
+  const { provider, phone, pago, days, iva, transp, items, city, anticipoPct, declarante, reteicaPct, garantiaPct, garantiaDias, obraId, empresaId } = req.body;
+
+  if (!provider || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Falta el proveedor o al menos un ítem con material, cantidad y precio.' });
+  }
+
+  const cleanItems = items
+    .map(it => {
+      const qty = Number(it.qty) || 0;
+      const price = Number(it.price) || 0;
+      let disponible = it.disponible === '' || it.disponible == null ? qty : Number(it.disponible);
+      if (isNaN(disponible)) disponible = qty;
+      if (disponible > qty) disponible = qty;
+      return { material: (it.material || '').trim(), qty, price, disponible, subtotal: qty * price };
+    })
+    .filter(it => it.material && it.qty > 0 && it.price >= 0);
+
+  if (cleanItems.length === 0) {
+    return res.status(400).json({ error: 'Agrega al menos un ítem válido (material, cantidad y precio).' });
+  }
+
+  const updates = {
+    provider, phone: phone || null, pago: pago || null, days: days || null,
+    iva: Number(iva) || 0, transp: Number(transp) || 0, city: city || null,
+    anticipoPct: Number(anticipoPct) || 0, declarante: declarante === 'no' ? 'no' : 'si',
+    reteicaPct: Number(reteicaPct) || 0, garantiaPct: Number(garantiaPct) || 0, garantiaDias: Number(garantiaDias) || 0,
+    obraId: obraId || null, empresaId: empresaId != null ? (empresaId || null) : existing.empresaId,
+    items: cleanItems, updatedAt: new Date().toISOString()
+  };
+
+  ref.assign(updates).write();
+  ensureProvider(provider, phone || null);
+  res.json(calcQuote(ref.value(), getSettings()));
 });
 
 app.delete('/api/quotes/:id', (req, res) => {
@@ -222,19 +411,32 @@ app.get('/api/orders/completed', (req, res) => {
   res.json(db.get('completedOrders').value());
 });
 
+// Generar un pedido a partir de una cotización — opcionalmente solo con una PARTE de
+// sus materiales (cuando al final no se compra el pedido completo). La cotización
+// original nunca se modifica: el pedido es un registro nuevo con los totales
+// recalculados solo para los materiales seleccionados.
 app.post('/api/orders', (req, res) => {
-  const { quoteId } = req.body;
+  const { quoteId, items: selectedNames } = req.body;
   const quote = db.get('quotes').find({ id: quoteId }).value();
   if (!quote) return res.status(404).json({ error: 'No se encontró la cotización.' });
 
-  const calc = calcQuote(quote, getSettings());
+  let itemsToUse = quote.items;
+  let parcial = false;
+  if (Array.isArray(selectedNames) && selectedNames.length > 0 && selectedNames.length < quote.items.length) {
+    const wanted = new Set(selectedNames.map(normalizeMaterialName));
+    const filtered = quote.items.filter(it => wanted.has(normalizeMaterialName(it.material)));
+    if (filtered.length > 0) { itemsToUse = filtered; parcial = true; }
+  }
+
+  const calc = calcQuote({ ...quote, items: itemsToUse }, getSettings());
   const entry = {
     id: nanoid(),
     quoteId: quote.id,
     provider: quote.provider,
-    resumen: quote.items.map(it => `${it.qty} ${it.material}`).join(', '),
-    items: quote.items.map(it => ({ material: it.material, qty: it.qty, price: it.price })),
+    resumen: itemsToUse.map(it => `${it.qty} ${it.material}`).join(', '),
+    items: itemsToUse.map(it => ({ material: it.material, qty: it.qty, price: it.price })),
     total: calc.total,
+    parcial,
     diasPrometidos: Number(quote.days) || 0,
     fechaPedido: new Date().toISOString().slice(0, 10)
   };
@@ -271,16 +473,16 @@ app.post('/api/orders/:id/complete', (req, res) => {
 // ---------- Presupuesto de obra y compra anticipada ----------
 
 app.get('/api/budget', (req, res) => {
-  res.json(db.get('budgetItems').value());
+  res.json(scopeByGroup(db.get('budgetItems').value(), req));
 });
 
 app.post('/api/budget', (req, res) => {
-  const { material, unidad, cantidadTotal, obraId } = req.body;
+  const { material, unidad, cantidadTotal, obraId, empresaId } = req.body;
   const cantidad = Number(cantidadTotal);
   if (!material || isNaN(cantidad) || cantidad <= 0) {
     return res.status(400).json({ error: 'Completa material y una cantidad total mayor a 0.' });
   }
-  const item = { id: nanoid(), material: String(material).trim(), unidad: unidad ? String(unidad).trim() : '', cantidadTotal: cantidad, obraId: obraId || null };
+  const item = { id: nanoid(), material: String(material).trim(), unidad: unidad ? String(unidad).trim() : '', cantidadTotal: cantidad, obraId: obraId || null, empresaId: empresaId || null };
   db.get('budgetItems').push(item).write();
   res.status(201).json(item);
 });
@@ -288,11 +490,12 @@ app.post('/api/budget', (req, res) => {
 app.post('/api/budget/bulk', (req, res) => {
   const items = Array.isArray(req.body.items) ? req.body.items : [];
   const obraId = req.body.obraId || null;
+  const empresaId = req.body.empresaId || null;
   const created = [];
   items.forEach(it => {
     const cantidad = Number(it.cantidad != null ? it.cantidad : it.cantidadTotal);
     if (!it.material || isNaN(cantidad) || cantidad <= 0) return;
-    const item = { id: nanoid(), material: String(it.material).trim(), unidad: it.unidad ? String(it.unidad).trim() : '', cantidadTotal: cantidad, obraId };
+    const item = { id: nanoid(), material: String(it.material).trim(), unidad: it.unidad ? String(it.unidad).trim() : '', cantidadTotal: cantidad, obraId, empresaId };
     db.get('budgetItems').push(item).write();
     created.push(item);
   });
@@ -350,13 +553,13 @@ app.delete('/api/material-aliases/:id', (req, res) => {
 // sigue funcionando junto como hasta ahora ("General").
 
 app.get('/api/obras', (req, res) => {
-  res.json(db.get('obras').value());
+  res.json(scopeByGroup(db.get('obras').value(), req));
 });
 
 app.post('/api/obras', (req, res) => {
   const nombre = String(req.body.nombre || '').trim();
   if (!nombre) return res.status(400).json({ error: 'Escribe un nombre para la obra/proyecto.' });
-  const obra = { id: nanoid(), nombre };
+  const obra = { id: nanoid(), nombre, empresaId: req.body.empresaId || null };
   db.get('obras').push(obra).write();
   res.status(201).json(obra);
 });
@@ -373,16 +576,16 @@ app.delete('/api/obras/:id', (req, res) => {
 // está por vencer, para renegociar a tiempo (esto último no lo vimos en la competencia).
 
 app.get('/api/agreements', (req, res) => {
-  res.json(db.get('agreements').value());
+  res.json(scopeByGroup(db.get('agreements').value(), req));
 });
 
 app.post('/api/agreements', (req, res) => {
-  const { provider, material, price, iva, vigenciaHasta } = req.body;
+  const { provider, material, price, iva, vigenciaHasta, empresaId } = req.body;
   const priceNum = Number(price);
   if (!provider || !material || !priceNum || priceNum <= 0 || !vigenciaHasta) {
     return res.status(400).json({ error: 'Completa proveedor, material, precio pactado y fecha de vigencia.' });
   }
-  const agreement = { id: nanoid(), provider: String(provider).trim(), material: String(material).trim(), price: priceNum, iva: Number(iva) || 0, vigenciaHasta };
+  const agreement = { id: nanoid(), provider: String(provider).trim(), material: String(material).trim(), price: priceNum, iva: Number(iva) || 0, vigenciaHasta, empresaId: empresaId || null };
   db.get('agreements').push(agreement).write();
   ensureProvider(provider, null);
   res.status(201).json(agreement);
