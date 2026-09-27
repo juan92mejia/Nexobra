@@ -18,7 +18,8 @@ const DEFAULT_STATE = {
   budgetItems: [],
   ordersInProgress: [],
   completedOrders: [],
-  settings: { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15 }
+  materialAliases: [],
+  settings: { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8 }
 };
 db.setState(Object.assign({}, DEFAULT_STATE, db.getState())).write();
 
@@ -278,6 +279,46 @@ app.post('/api/budget/bulk', (req, res) => {
 
 app.delete('/api/budget/:id', (req, res) => {
   db.get('budgetItems').remove({ id: req.params.id }).write();
+  res.status(204).end();
+});
+
+// ---------- Unificación de materiales equivalentes ----------
+// Distintos proveedores nombran el mismo material de forma diferente
+// ("Válvula compuerta elástica 2\" HD" vs "Válvula compuerta elástica BR 2\" APOLO").
+// Sin esto, el comparador los trata como productos distintos y nunca detecta que
+// un proveedor cubre el pedido completo. La unificación SIEMPRE la confirma una
+// persona — nunca se fusiona automáticamente, para no ocultar que en realidad
+// podrían ser productos diferentes (marca, modelo, calidad).
+
+function normalizeMaterialName(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+app.get('/api/material-aliases', (req, res) => {
+  res.json(db.get('materialAliases').value());
+});
+
+app.post('/api/material-aliases', (req, res) => {
+  const names = (Array.isArray(req.body.names) ? req.body.names : []).map(normalizeMaterialName).filter(Boolean);
+  const canonical = String(req.body.canonical || '').trim();
+  if (!canonical || names.length < 1) {
+    return res.status(400).json({ error: 'Falta el nombre unificado o los materiales a unir.' });
+  }
+  const groups = db.get('materialAliases');
+  // Si alguno de los nombres ya pertenece a un grupo existente, se fusiona ahí en vez de duplicar.
+  let existing = groups.value().find(g => names.some(n => g.aliases.includes(n)) || g.aliases.includes(normalizeMaterialName(canonical)));
+  if (existing) {
+    const merged = Array.from(new Set([...existing.aliases, ...names, normalizeMaterialName(canonical)]));
+    groups.find({ id: existing.id }).assign({ canonical, aliases: merged }).write();
+    return res.status(200).json(groups.find({ id: existing.id }).value());
+  }
+  const group = { id: nanoid(), canonical, aliases: Array.from(new Set([...names, normalizeMaterialName(canonical)])) };
+  groups.push(group).write();
+  res.status(201).json(group);
+});
+
+app.delete('/api/material-aliases/:id', (req, res) => {
+  db.get('materialAliases').remove({ id: req.params.id }).write();
   res.status(204).end();
 });
 
