@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nexobra Mercado — Comparador de Cotizaciones</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#1B1B18">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#EAE7DE; --panel:#FFFFFF; --ink:#201F1B; --ink-soft:#57544C; --line:#D8D3C6;
+    --accent:#D65A1F; --good:#2F6B3A; --good-bg:#E4EEE2; --warn:#9A6B00; --warn-bg:#F5EBD4;
+    --bad:#A6321F; --bad-bg:#F5DFDA; --info:#2A5C8A; --info-bg:#E2EBF3;
+    box-sizing:border-box; padding-top: env(safe-area-inset-top,0px); padding-bottom: env(safe-area-inset-bottom,0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#17181A; --panel:#222325; --ink:#F1EFE9; --ink-soft:#A9A6A0; --line:#383A3D;
+      --good-bg:#1E2B20; --warn-bg:#332B15; --bad-bg:#33201C; --info-bg:#1B2A36;
+    }
+  }
+  html { scroll-padding-top: env(safe-area-inset-top,0px); }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Source Sans 3',sans-serif; line-height:1.5; }
+  h1,h2,h3 { font-family:'Montserrat',sans-serif; font-weight:700; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 80px; }
+  a.back { color: var(--ink-soft); text-decoration: none; font-size: 14px; }
+  header { border-bottom: 3px solid var(--ink); padding-bottom: 18px; margin: 12px 0 20px; }
+  header .brand { font-size: 13px; color: var(--accent); font-weight: 700; margin-bottom: 4px; display:flex; align-items:center; gap:8px; }
+  header h1 { font-size: 26px; margin: 0 0 6px; }
+  header p { margin: 0; color: var(--ink-soft); max-width: 68ch; }
+  .season-tip { background: var(--info-bg); color: var(--info); border: 1px solid var(--info); padding: 10px 14px; font-size: 13.5px; margin-bottom: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-size: 17px; margin: 0 0 4px; }
+  .card h3 { font-size: 14px; margin: 18px 0 10px; color: var(--ink-soft); }
+  .field-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  @media (max-width: 640px) { .field-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 420px) { .field-grid { grid-template-columns: 1fr; } }
+  .field-subhead { grid-column: 1/-1; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 12px; margin-top: 2px; }
+  .field-subhead:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  label { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:4px; }
+  label .opt { font-weight: 400; font-style: italic; }
+  input, textarea, select { width:100%; padding:9px 10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit; font-size:15px; }
+  input:focus, textarea:focus, select:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .checkbox-row { display:flex; align-items:center; gap:8px; }
+  .checkbox-row input { width:auto; }
+  .checkbox-row label { margin:0; }
+  button { font:inherit; font-weight:700; cursor:pointer; border:none; padding:11px 18px; font-size:15px; }
+  .btn-primary { background: var(--ink); color: var(--panel); margin-top: 14px; }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); padding: 6px 10px; font-size: 13px; font-weight:600; }
+  .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+  .btn-small { padding: 5px 9px; font-size: 12.5px; }
+  .item-row { display:grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:end; }
+  @media (max-width: 640px) { .item-row { grid-template-columns: 1fr 1fr; } }
+  .item-row .mini-label { font-size:11px; color:var(--ink-soft); margin-bottom:2px; }
+  table { width:100%; border-collapse: collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 8px; border-bottom:1px solid var(--line); }
+  th { color: var(--ink-soft); font-weight:700; font-size:12px; }
+  .table-scroll { overflow-x: auto; }
+  .empty { color: var(--ink-soft); font-size:14px; padding:8px 0; }
+  .hint { font-size:13px; color: var(--ink-soft); margin: 0 0 10px; }
+  code { background: var(--bg); border: 1px solid var(--line); padding: 1px 5px; font-size: 13px; }
+  .btn-whatsapp { display:inline-block; background:#2F6B3A; color:#fff; text-decoration:none; padding:6px 12px; font-size:13px; font-weight:700; margin-top:6px; }
+  .btn-whatsapp:hover { background:#244F2C; }
+  .quote-card { border: 1px solid var(--line); padding: 16px; margin-bottom: 14px; }
+  .quote-card.best { border-color: var(--good); background: var(--good-bg); }
+  .quote-head { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .quote-head .provider { font-family:'Montserrat',sans-serif; font-weight:700; font-size:16px; }
+  .quote-head .total { font-family:'Montserrat',sans-serif; font-weight:700; font-size:20px; }
+  .tag-best { color: var(--good); font-weight:700; font-size:12px; display:block; }
+  .tag-partial { color: var(--warn); font-weight:700; font-size:12px; }
+  .tag-nostock { color: var(--bad); font-weight:700; font-size:12px; }
+  .quote-meta { font-size:13px; color: var(--ink-soft); margin-bottom: 10px; }
+  .provider-sub { font-size:11.5px; color: var(--ink-soft); font-weight:400; margin-top:2px; }
+  .price-trend-up { color: var(--bad); font-size:11px; display:block; }
+  .price-trend-down { color: var(--good); font-size:11px; display:block; }
+  .price-trend-flat { color: var(--ink-soft); font-size:11px; display:block; }
+  .lead-warn { font-size:11px; color: var(--warn); display:block; }
+  .insight { border-left:3px solid var(--accent); padding:4px 0 4px 14px; margin:0 0 12px; font-size:14.5px; }
+  .insight-info { border-left-color: var(--info); }
+  .plan-box { border:1px solid var(--line); padding:14px 16px; margin-bottom:14px; background:var(--bg); }
+  .plan-box h4 { margin:0 0 8px; font-size:14px; }
+  .plan-box .total-line { font-size:20px; font-family:'Montserrat',sans-serif; margin:6px 0; }
+  .plan-box ul { margin:8px 0 0; padding-left:20px; }
+  .plan-box li { margin-bottom:4px; font-size:14px; }
+  .cons-title { color: var(--warn); font-weight:700; font-size:13px; margin-top:10px; }
+  .badge-verdict { display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; margin-bottom:10px; }
+  .badge-mixed, .badge-single { background: var(--good-bg); color: var(--good); }
+  .badge-forced { background: var(--warn-bg); color: var(--warn); }
+  .badge-risk { background: var(--bad-bg); color: var(--bad); }
+  .settings-row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding-bottom:14px; margin-bottom:14px; border-bottom:1px dashed var(--line); }
+  @media (max-width: 520px) { .settings-row { grid-template-columns: 1fr; } }
+  .progress-track { background: var(--line); height:8px; width:100%; border-radius:4px; overflow:hidden; margin:4px 0; }
+  .progress-fill { height:100%; background: var(--good); }
+  .progress-fill.warn { background: var(--warn); }
+  .progress-fill.risk { background: var(--bad); }
+  .budget-item { border:1px solid var(--line); padding:12px 14px; margin-bottom:10px; background:var(--bg); }
+  .budget-item .budget-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:14px; margin-bottom:4px; }
+  .pedido-item { border:1px solid var(--line); padding:12px 14px; margin-bottom:10px; background:var(--bg); }
+  .pedido-item .pedido-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:14px; margin-bottom:8px; }
+  .pedido-controls { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .pedido-controls > div { min-width:150px; }
+  .link-list { list-style:none; margin:10px 0 0; padding:0; }
+  .link-list li { margin-bottom:8px; }
+  .link-list a { color: var(--accent); text-decoration:none; font-weight:700; font-size:14px; }
+  .link-list a:hover { text-decoration:underline; }
+  .ai-disclaimer { font-size:12px; color: var(--ink-soft); font-style:italic; margin-top:8px; }
+  .import-preview td { white-space:normal; vertical-align:top; }
+  .import-preview input[type="text"] { min-width:160px; }
+  .import-preview input[type="number"] { min-width:80px; }
+  .import-preview input[type="checkbox"] { width:auto; }
+  footer { color: var(--ink-soft); font-size:13px; margin-top:24px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← Nexobra</a>
+  <header>
+    <div class="brand"><img src="/icons/icon-192.png" alt="" width="18" height="18">NEXOBRA MERCADO</div>
+    <h1>Comparador de cotizaciones</h1>
+    <p>Registra la cotización completa de cada proveedor — con todos sus materiales, disponibilidad, ciudad, condiciones de pago y retenciones colombianas — y compara el costo total real, con historial de cumplimiento y compra anticipada según tu presupuesto de obra.</p>
+  </header>
+
+  <div class="season-tip" id="season-tip"></div>
+
+  <div class="card">
+    <h2>Ajustes de comparación</h2>
+    <p class="hint">Se guardan en el servidor de tu empresa (compartidos para todos los que usen esta cuenta de Nexobra).</p>
+    <div class="settings-row">
+      <div><label for="s-capital">Costo de tu capital / oportunidad (% anual) <span class="opt">— 0 = ignorar</span></label><input id="s-capital" type="number" min="0" step="any"></div>
+      <div><label for="s-tolerancia">Sobreprecio máximo por un proveedor más confiable (%) <span class="opt">— 0 = elegir siempre el más barato</span></label><input id="s-tolerancia" type="number" min="0" step="any"></div>
+    </div>
+    <div class="checkbox-row"><input type="checkbox" id="s-retenedor"><label for="s-retenedor">Mi empresa es agente autorretenedor / practica retención en la fuente a proveedores</label></div>
+    <p class="hint" style="margin-top:6px;">Si lo marcas, se calcula la retefuente a practicar (2,5% declarante / 3,5% no declarante, sobre compras que superen 10 UVT ≈ $498.000 en 2025 — valor referencial). No aumenta tu costo: es dinero que igual pagas, solo que una parte va directo a la DIAN.</p>
+  </div>
+
+  <div class="card">
+    <h2>Presupuesto de obra y compra anticipada</h2>
+    <p class="hint">Registra las cantidades del presupuesto por material. La app cruza esto con tus pedidos en curso y tu historial para saber cuánto llevas comprado, y te avisa cuándo negociar el lote anticipado y cuándo reponer — para no comprar a última hora en pequeñas cantidades durante la obra.</p>
+    <div class="settings-row">
+      <div><label for="s-anticipado">Meta de compra anticipada antes de iniciar obra (% del presupuesto)</label><input id="s-anticipado" type="number" min="1" max="100" step="any"></div>
+      <div><label for="s-disparo">Reponer cuando quede sin comprar (% del presupuesto)</label><input id="s-disparo" type="number" min="1" max="100" step="any"></div>
+    </div>
+    <div class="field-grid">
+      <div><label for="b-material">Material (presupuesto)</label><input id="b-material" type="text" placeholder="Ej: Cemento gris 50kg"></div>
+      <div><label for="b-unidad">Unidad</label><input id="b-unidad" type="text" placeholder="Ej: bultos, m3, kg, unid"></div>
+      <div><label for="b-cantidad">Cantidad total del presupuesto</label><input id="b-cantidad" type="number" min="0" step="any" placeholder="3000"></div>
+    </div>
+    <button class="btn-primary" onclick="addBudgetItem()">Agregar material del presupuesto</button>
+    <div id="presupuesto-area" style="margin-top:16px;"><p class="empty">Cargando…</p></div>
+
+    <h3>Importar desde Excel/CSV/PDF o lista pegada</h3>
+    <p class="hint">Sube el presupuesto de obra completo (con actividades/módulos y muchos ítems) y la app intenta reconocer material, unidad y cantidad automáticamente. Siempre revisa antes de importar.</p>
+    <div class="field-grid"><div><label for="f-import-file">Archivo (.xlsx, .xls, .csv o .pdf)</label><input id="f-import-file" type="file" accept=".xlsx,.xls,.csv,.pdf"></div></div>
+    <p class="hint" id="import-status" style="margin-top:10px;"></p>
+    <p class="hint">O pega una lista, un ítem por línea: <code>Material; Unidad; Cantidad</code></p>
+    <textarea id="f-import-paste" rows="3" placeholder="Cemento gris 50kg; bultos; 3000&#10;Varilla 1/2 x 6m; unid; 1200"></textarea>
+    <button class="btn-primary" onclick="interpretPastedList()">Interpretar lista</button>
+    <div id="import-preview-area"></div>
+  </div>
+
+  <div class="card">
+    <h2>Buscar en el mercado más amplio</h2>
+    <p class="hint">Para materiales que no logras cotizar localmente, o que conviene pedir por encargo directo a fábrica: genera enlaces reales y sugerencias de fabricantes/distribuidores conocidos, para ampliar tu radar más allá de intermediarios cercanos.</p>
+    <div class="field-grid">
+      <div><label for="f-search-material">Material que necesitas</label><input id="f-search-material" type="text" placeholder="Ej: Perfilería de aluminio serie 3"></div>
+      <div><label for="f-search-city">Ciudad de referencia <span class="opt">— opcional</span></label><input id="f-search-city" type="text" placeholder="Ej: Barranquilla"></div>
+    </div>
+    <button class="btn-primary" onclick="generateSearchLinks()">Generar enlaces de búsqueda</button>
+    <button class="btn-ghost" style="margin-top:14px;" onclick="suggestManufacturers()">Sugerir fabricantes/distribuidores con IA</button>
+    <div id="search-links-area"></div>
+    <div id="ai-manufacturers-area"></div>
+  </div>
+
+  <div class="card">
+    <h2>Agregar cotización</h2>
+    <div class="field-grid">
+      <div class="field-subhead">Datos básicos</div>
+      <div><label for="f-provider">Proveedor</label><input id="f-provider" type="text" placeholder="Ej: Homecenter"></div>
+      <div><label for="f-city">Ciudad de despacho</label><input id="f-city" type="text" placeholder="Ej: Medellín"></div>
+      <div><label for="f-days">Tiempo de entrega (días)</label><input id="f-days" type="number" min="0" step="any" placeholder="5"></div>
+      <div><label for="f-iva">IVA de la cotización (%)</label><input id="f-iva" type="number" min="0" step="any" placeholder="19"></div>
+      <div><label for="f-transp">Transporte total ($)</label><input id="f-transp" type="number" min="0" step="any" placeholder="350000"></div>
+      <div><label for="f-phone">WhatsApp / Teléfono</label><input id="f-phone" type="text" placeholder="Ej: 3001234567"></div>
+
+      <div class="field-subhead">Pago y condiciones (Colombia)</div>
+      <div><label for="f-anticipo">Anticipo requerido (%) <span class="opt">— 0 = sin anticipo</span></label><input id="f-anticipo" type="number" min="0" max="100" step="any" placeholder="50"></div>
+      <div><label for="f-pago">Condiciones de pago</label><input id="f-pago" type="text" placeholder="Ej: resto contra entrega"></div>
+      <div><label for="f-declarante">¿Proveedor declarante de renta?</label><select id="f-declarante"><option value="si">Sí (2,5%)</option><option value="no">No (3,5%)</option></select></div>
+      <div>
+        <label for="f-reteica">ReteICA aplicable (%) <span class="opt">— depende del municipio y la actividad</span></label>
+        <input id="f-reteica" type="number" min="0" step="any" placeholder="0 si no la sabes">
+        <div style="margin-top:6px;">
+          <button type="button" class="btn-ghost btn-small" onclick="openReteicaHelp()">Buscar tarifa de mi ciudad</button>
+          <button type="button" class="btn-ghost btn-small" onclick="suggestReteica()">Referencia con IA</button>
+        </div>
+        <div id="reteica-ai-area"></div>
+      </div>
+
+      <div class="field-subhead">Garantía técnica (opcional, se acuerda con el proveedor — no es una obligación legal)</div>
+      <div style="grid-column:1/-1;">
+        <p class="hint" style="margin-top:0;">Retienes una parte del pago hasta comprobar que el material funciona bien con el tiempo. <strong>Normalmente no aplica</strong> a insumos simples (cemento, arena, ladrillo). Sí tiene sentido en materiales que se instalan y se prueban después: impermeabilizantes, ventanería, redes eléctricas/hidráulicas, cubiertas.</p>
+      </div>
+      <div>
+        <label for="f-garantia-riesgo">¿Aplica garantía técnica retenida?</label>
+        <select id="f-garantia-riesgo" onchange="toggleGarantiaCustom()">
+          <option value="0">No aplica — insumo simple</option>
+          <option value="5">Sí, riesgo medio (instalación estándar) → 5%</option>
+          <option value="10">Sí, riesgo alto (sistemas críticos) → 10%</option>
+          <option value="custom">Otro % acordado</option>
+        </select>
+      </div>
+      <div id="f-garantia-custom-wrap" style="display:none;"><label for="f-garantia-custom">% acordado</label><input id="f-garantia-custom" type="number" min="0" step="any"></div>
+      <div>
+        <label for="f-garantia-dias-select">Plazo de liberación</label>
+        <select id="f-garantia-dias-select" onchange="toggleGarantiaDiasCustom()">
+          <option value="0">No aplica</option>
+          <option value="30">30 días (estándar)</option>
+          <option value="60">60 días</option>
+          <option value="90">90 días</option>
+          <option value="180">Una temporada completa (~180 días)</option>
+          <option value="custom">Otro plazo</option>
+        </select>
+      </div>
+      <div id="f-garantia-dias-custom-wrap" style="display:none;"><label for="f-garantia-dias-custom">Días acordados</label><input id="f-garantia-dias-custom" type="number" min="0" step="any"></div>
+    </div>
+
+    <h3>Materiales cotizados</h3>
+    <div id="items-container"></div>
+    <button class="btn-ghost" onclick="addItemRow()">+ Agregar ítem</button>
+
+    <div><button class="btn-primary" onclick="saveQuote()">Guardar cotización</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Pegar cotización con IA</h2>
+    <p class="hint">Pega el texto de un correo, un chat de WhatsApp, o lo que hayas transcrito de un PDF/imagen — puede incluir varios materiales a la vez.</p>
+    <textarea id="f-paste" rows="4" placeholder="Ej: Homecenter cotiza: 100 tubos conduflex 1/2 a $1.200 c/u, 30 tomacorrientes sencillos a $8.500 c/u. IVA 19%, transporte $80.000, entrega 5 días, 50% anticipo. Tel 3001234567"></textarea>
+    <button class="btn-primary" onclick="extractQuote()">Extraer con IA</button>
+    <p class="hint" id="extract-status"></p>
+  </div>
+
+  <div class="card">
+    <h2>Comparación de cotizaciones</h2>
+    <div id="quotes-area"><p class="empty">Cargando…</p></div>
+  </div>
+
+  <div class="card" id="insight-card" style="display:none;">
+    <h2>Plan de compra recomendado</h2>
+    <div id="insight-text"></div>
+  </div>
+
+  <div class="card">
+    <h2>Pedidos en curso</h2>
+    <p class="hint">Cuando confirmes una compra, márcala en su tarjeta de cotización. Al registrar si llegó a tiempo y con qué calidad, se construye el historial real de cada proveedor.</p>
+    <div id="pedidos-area"><p class="empty">Cargando…</p></div>
+  </div>
+
+  <div class="card">
+    <h2>Desempeño y gasto por proveedor</h2>
+    <div id="providers-area"><p class="empty">Cargando…</p></div>
+  </div>
+
+  <footer>Nexobra Mercado · datos guardados en tu propio servidor</footer>
+</div>
+
+<script>
+const API = '/api';
+function fmt(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(n || 0); }
+function fmtPct(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 }).format(n || 0); }
+
+let settings = { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15 };
+let quotesCache = [], providersCache = [], budgetCache = [], ordersInProgressCache = [], ordersCompletedCache = [];
+
+/* ---------- Tip de temporada ---------- */
+(function seasonTip() {
+  const el = document.getElementById('season-tip');
+  const month = new Date().getMonth();
+  const favorable = [2,3,4,7,8,9].includes(month);
+  el.textContent = favorable
+    ? 'Estás en una temporada típicamente favorable para negociar con proveedores (marzo–mayo y agosto–octubre suelen tener mejores ofertas y más disposición a negociar plazos).'
+    : 'Estás fuera de las temporadas de mejor negociación (marzo–mayo y agosto–octubre) — es normal que los proveedores tengan menos margen en precio y plazos por mayor demanda.';
+})();
+
+/* ---------- Ajustes ---------- */
+
+async function loadSettings() {
+  settings = await (await fetch(`${API}/settings`)).json();
+  document.getElementById('s-capital').value = settings.costoCapitalAnual || '';
+  document.getElementById('s-tolerancia').value = settings.tolerancia || '';
+  document.getElementById('s-retenedor').checked = !!settings.esRetenedor;
+  document.getElementById('s-anticipado').value = settings.pctAnticipado || 60;
+  document.getElementById('s-disparo').value = settings.pctDisparo || 15;
+}
+
+async function saveSetting(field, value) {
+  settings = await (await fetch(`${API}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) })).json();
+  loadQuotes();
+  renderPresupuesto();
+}
+
+document.getElementById('s-capital').addEventListener('change', e => saveSetting('costoCapitalAnual', parseFloat(e.target.value) || 0));
+document.getElementById('s-tolerancia').addEventListener('change', e => saveSetting('tolerancia', parseFloat(e.target.value) || 0));
+document.getElementById('s-retenedor').addEventListener('change', e => saveSetting('esRetenedor', e.target.checked));
+document.getElementById('s-anticipado').addEventListener('change', e => saveSetting('pctAnticipado', parseFloat(e.target.value) || 60));
+document.getElementById('s-disparo').addEventListener('change', e => saveSetting('pctDisparo', parseFloat(e.target.value) || 15));
+
+/* ---------- Presupuesto de obra ---------- */
+
+async function loadBudget() { budgetCache = await (await fetch(`${API}/budget`)).json(); renderPresupuesto(); }
+
+async function addBudgetItem() {
+  const material = document.getElementById('b-material').value.trim();
+  const unidad = document.getElementById('b-unidad').value.trim();
+  const cantidadTotal = parseFloat(document.getElementById('b-cantidad').value);
+  if (!material || isNaN(cantidadTotal) || cantidadTotal <= 0) { alert('Completa material y una cantidad total mayor a 0.'); return; }
+  const res = await fetch(`${API}/budget`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, unidad, cantidadTotal }) });
+  if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+  document.getElementById('b-material').value = ''; document.getElementById('b-unidad').value = ''; document.getElementById('b-cantidad').value = '';
+  loadBudget();
+}
+
+async function removeBudgetItem(id) { await fetch(`${API}/budget/${id}`, { method: 'DELETE' }); loadBudget(); }
+
+function useMaterialInQuote(material) {
+  addItemRow({ material });
+  document.getElementById('f-provider').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function computeBudgetStatus(item) {
+  const key = item.material.trim().toLowerCase();
+  const matchQty = (arr) => arr.reduce((s, o) => s + (o.items || []).filter(it => it.material.trim().toLowerCase() === key).reduce((s2, it) => s2 + (Number(it.qty) || 0), 0), 0);
+  const comprado = matchQty(ordersCompletedCache) + matchQty(ordersInProgressCache);
+  const pctComprado = item.cantidadTotal > 0 ? (comprado / item.cantidadTotal) * 100 : 0;
+  const metaAnticipada = item.cantidadTotal * ((settings.pctAnticipado || 60) / 100);
+  const restante = Math.max(0, item.cantidadTotal - comprado);
+  const pctRestante = item.cantidadTotal > 0 ? (restante / item.cantidadTotal) * 100 : 0;
+
+  let status, badgeClass, barClass = '';
+  if (comprado <= 0) { status = `Por cotizar y negociar anticipadamente (meta: ${fmt(metaAnticipada)} ${item.unidad || 'unid.'}, ${fmtPct(settings.pctAnticipado)}%)`; badgeClass = 'badge-forced'; barClass = 'warn'; }
+  else if (comprado < metaAnticipada) { status = `En camino a la compra anticipada — faltan ${fmt(metaAnticipada - comprado)} ${item.unidad || 'unid.'} para el ${fmtPct(settings.pctAnticipado)}%`; badgeClass = 'badge-forced'; }
+  else if (restante <= 0) { status = 'Presupuesto totalmente cubierto'; badgeClass = 'badge-mixed'; }
+  else if (pctRestante <= (settings.pctDisparo || 15)) { status = `⚠ Reponer ahora — solo queda ${fmt(restante)} ${item.unidad || 'unid.'} (${fmtPct(pctRestante)}%) sin comprar`; badgeClass = 'badge-risk'; barClass = 'risk'; }
+  else { status = `Compra anticipada completa ✓ — quedan ${fmt(restante)} ${item.unidad || 'unid.'} (${fmtPct(pctRestante)}%) para pedir según avance`; badgeClass = 'badge-single'; }
+  return { comprado, pctComprado: Math.min(100, pctComprado), status, badgeClass, barClass };
+}
+
+function renderPresupuesto() {
+  const area = document.getElementById('presupuesto-area');
+  if (budgetCache.length === 0) { area.innerHTML = '<p class="empty">Aún no has registrado materiales del presupuesto de obra.</p>'; return; }
+  let html = '';
+  budgetCache.forEach(item => {
+    const st = computeBudgetStatus(item);
+    html += `<div class="budget-item">
+      <div class="budget-head"><span><strong>${item.material}</strong> · ${fmt(item.cantidadTotal)} ${item.unidad || 'unid.'} presupuestados</span>
+      <span class="provider-sub">Comprado/comprometido: ${fmt(st.comprado)} ${item.unidad || 'unid.'} (${fmtPct(st.pctComprado)}%)</span></div>
+      <div class="progress-track"><div class="progress-fill ${st.barClass}" style="width:${Math.min(100, st.pctComprado)}%"></div></div>
+      <div class="badge-verdict ${st.badgeClass}">${st.status}</div>
+      <div><button class="btn-ghost btn-small" onclick='useMaterialInQuote(${JSON.stringify(item.material)})'>Cotizar este material</button>
+      <button class="btn-ghost btn-small" onclick="removeBudgetItem('${item.id}')">Quitar</button></div>
+    </div>`;
+  });
+  area.innerHTML = html;
+}
+
+/* ---------- Importar presupuesto ---------- */
+
+let importPreview = [];
+
+function loadScriptOnce(url) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${url}"]`)) return resolve();
+    const s = document.createElement('script'); s.src = url;
+    s.onload = () => resolve(); s.onerror = () => reject(new Error('No se pudo cargar ' + url));
+    document.head.appendChild(s);
+  });
+}
+
+function parseNumberLike(v) {
+  if (typeof v === 'number') return v;
+  if (v == null) return NaN;
+  let s = String(v).trim(); if (!s) return NaN;
+  s = s.replace(/[^0-9.,-]/g, ''); if (!s) return NaN;
+  if (s.includes('.') && s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (s.includes(',') && !s.includes('.')) { const parts = s.split(','); s = parts[parts.length - 1].length <= 2 ? s.replace(',', '.') : s.replace(/,/g, ''); }
+  else if (s.includes('.')) { const parts = s.split('.'); if (parts.length > 2) s = s.replace(/\./g, ''); }
+  return parseFloat(s);
+}
+
+function normalizeHeader(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+const DESC_KEYS = ['descripcion', 'material', 'concepto', 'detalle', 'insumo'];
+const UNIT_KEYS = ['unidad', 'und', 'unid', 'un.', 'un '];
+const QTY_KEYS = ['cantidad', 'cant.', 'cant '];
+
+function classifyHeaderRow(row) {
+  let descIdx = -1, unidadIdx = -1, cantIdx = -1;
+  row.forEach((cell, idx) => {
+    const norm = normalizeHeader(cell); if (!norm) return;
+    if (descIdx === -1 && DESC_KEYS.some(k => norm.includes(k))) descIdx = idx;
+    if (unidadIdx === -1 && UNIT_KEYS.some(k => norm === k || norm.startsWith(k))) unidadIdx = idx;
+    if (cantIdx === -1 && QTY_KEYS.some(k => norm.includes(k))) cantIdx = idx;
+  });
+  return (descIdx !== -1 && cantIdx !== -1) ? { descIdx, unidadIdx, cantIdx } : null;
+}
+
+function extractItemsFromRows(rows) {
+  const items = []; let mapping = null;
+  rows.forEach(row => {
+    const header = classifyHeaderRow(row);
+    if (header) { mapping = header; return; }
+    if (!mapping) return;
+    const material = row[mapping.descIdx];
+    if (material == null || String(material).trim() === '') return;
+    const cantidad = parseNumberLike(row[mapping.cantIdx]);
+    if (isNaN(cantidad) || cantidad <= 0) return;
+    const unidad = mapping.unidadIdx !== -1 ? String(row[mapping.unidadIdx] || '').trim() : '';
+    items.push({ material: String(material).trim(), unidad, cantidad });
+  });
+  return items;
+}
+
+async function parseExcelFile(file) {
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  const buf = await file.arrayBuffer();
+  const workbook = XLSX.read(buf, { type: 'array' });
+  let all = [];
+  workbook.SheetNames.forEach(name => {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: '' });
+    all = all.concat(extractItemsFromRows(rows));
+  });
+  return all;
+}
+
+async function parsePdfFile(file) {
+  const status = document.getElementById('import-status');
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const buf = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+  let fullText = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    status.textContent = `Leyendo PDF... página ${p}/${pdf.numPages}`;
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    fullText += content.items.map(it => it.str).join(' ') + '\n';
+  }
+  if (!fullText.trim()) { status.textContent = 'El PDF no tiene texto extraíble (parece un escaneo/imagen). Pídele a Claude en el chat que lo lea y pega la lista de materiales abajo.'; return []; }
+
+  const chunks = []; const CHUNK = 6000;
+  for (let i = 0; i < fullText.length; i += CHUNK) chunks.push(fullText.slice(i, i + CHUNK));
+  let all = [];
+  for (let i = 0; i < chunks.length; i++) {
+    status.textContent = `Interpretando presupuesto con IA... parte ${i + 1}/${chunks.length}`;
+    try {
+      const res = await fetch(`${API}/ai/budget-extract`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: chunks[i] }) });
+      if (!res.ok) { if (res.status === 501) { document.getElementById('f-import-paste').value = fullText.slice(0, 5000); status.textContent = 'Se extrajo el texto pero la interpretación con IA no está configurada en el servidor (falta ANTHROPIC_API_KEY) — revisa el texto abajo.'; return []; } continue; }
+      const data = await res.json();
+      (data.items || []).forEach(it => {
+        const cantidad = parseNumberLike(it.cantidad);
+        if (it.material && !isNaN(cantidad) && cantidad > 0) all.push({ material: String(it.material).trim(), unidad: it.unidad ? String(it.unidad).trim() : '', cantidad });
+      });
+    } catch (e) { /* sigue con el siguiente fragmento */ }
+  }
+  return all;
+}
+
+document.getElementById('f-import-file').addEventListener('change', async (ev) => {
+  const file = ev.target.files[0]; const status = document.getElementById('import-status');
+  if (!file) return;
+  status.textContent = 'Procesando archivo...';
+  const ext = file.name.split('.').pop().toLowerCase();
+  try {
+    let items = [];
+    if (['xlsx', 'xls', 'csv'].includes(ext)) items = await parseExcelFile(file);
+    else if (ext === 'pdf') items = await parsePdfFile(file);
+    else { status.textContent = 'Formato no soportado. Usa .xlsx, .xls, .csv o .pdf.'; return; }
+    if (items.length === 0) { if (!status.textContent.includes('escaneo') && !status.textContent.includes('IA no está')) status.textContent = 'No se reconocieron ítems automáticamente. Usa la opción de pegar la lista manualmente.'; return; }
+    importPreview = items; renderImportPreview();
+    status.textContent = `Se reconocieron ${items.length} ítems. Revisa y confirma cuáles importar.`;
+  } catch (e) { status.textContent = 'No se pudo leer el archivo (' + e.message + '). Convierte a Excel/CSV o pega la lista manualmente.'; }
+});
+
+function interpretPastedList() {
+  const text = document.getElementById('f-import-paste').value;
+  const status = document.getElementById('import-status');
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) { status.textContent = 'Pega primero una lista de materiales.'; return; }
+  const items = [];
+  lines.forEach(line => {
+    let parts;
+    if (line.includes('\t')) parts = line.split('\t');
+    else if (line.includes(';')) parts = line.split(';');
+    else if ((line.match(/,/g) || []).length === 2) parts = line.split(',');
+    else parts = line.split(/\s{2,}/);
+    parts = parts.map(p => p.trim()).filter((p, i, arr) => !(p === '' && i === arr.length - 1));
+    if (parts.length < 2) return;
+    let material, unidad = '', cantidad;
+    if (parts.length >= 3) { material = parts[0]; unidad = parts[1]; cantidad = parseNumberLike(parts[2]); }
+    else { material = parts[0]; cantidad = parseNumberLike(parts[1]); }
+    if (material && !isNaN(cantidad) && cantidad > 0) items.push({ material, unidad, cantidad });
+  });
+  if (items.length === 0) { status.textContent = 'No se reconoció ningún ítem válido con el formato Material; Unidad; Cantidad.'; return; }
+  importPreview = items; renderImportPreview();
+  status.textContent = `Se interpretaron ${items.length} ítems. Revisa y confirma cuáles importar.`;
+}
+
+function renderImportPreview() {
+  const area = document.getElementById('import-preview-area');
+  if (importPreview.length === 0) { area.innerHTML = ''; return; }
+  let html = '<h3>Vista previa — revisa antes de importar</h3><div class="table-scroll"><table class="import-preview"><thead><tr><th></th><th>Material</th><th>Unidad</th><th>Cantidad total</th></tr></thead><tbody>';
+  importPreview.forEach((it, i) => {
+    html += `<tr><td><input type="checkbox" id="imp-chk-${i}" checked></td>
+      <td><input type="text" id="imp-mat-${i}" value="${String(it.material).replace(/"/g, '&quot;')}"></td>
+      <td><input type="text" id="imp-und-${i}" value="${String(it.unidad || '').replace(/"/g, '&quot;')}"></td>
+      <td><input type="number" id="imp-cant-${i}" value="${it.cantidad}" min="0" step="any"></td></tr>`;
+  });
+  html += '</tbody></table></div><button class="btn-primary" onclick="confirmImport()">Importar seleccionados al presupuesto</button> <button class="btn-ghost" onclick="cancelImport()">Descartar</button>';
+  area.innerHTML = html;
+}
+
+function cancelImport() { importPreview = []; document.getElementById('import-preview-area').innerHTML = ''; document.getElementById('import-status').textContent = ''; }
+
+async function confirmImport() {
+  const items = [];
+  importPreview.forEach((it, i) => {
+    const chk = document.getElementById('imp-chk-' + i); if (!chk || !chk.checked) return;
+    const material = document.getElementById('imp-mat-' + i).value.trim();
+    const unidad = document.getElementById('imp-und-' + i).value.trim();
+    const cantidad = parseFloat(document.getElementById('imp-cant-' + i).value);
+    if (material && !isNaN(cantidad) && cantidad > 0) items.push({ material, unidad, cantidad });
+  });
+  const res = await fetch(`${API}/budget/bulk`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) });
+  const data = await res.json();
+  importPreview = []; document.getElementById('import-preview-area').innerHTML = '';
+  document.getElementById('import-status').textContent = `${data.count} materiales importados al presupuesto de obra.`;
+  loadBudget();
+}
+
+/* ---------- Buscar en el mercado más amplio ---------- */
+
+function generateSearchLinks() {
+  const material = document.getElementById('f-search-material').value.trim();
+  const city = document.getElementById('f-search-city').value.trim();
+  const area = document.getElementById('search-links-area');
+  if (!material) { alert('Escribe el material que buscas.'); return; }
+  const links = [
+    { label: `Google — fabricantes directos de "${material}"`, url: `https://www.google.com/search?q=${encodeURIComponent(material + ' fabricante Colombia contacto')}` },
+    { label: `Google — distribuidores mayoristas${city ? ' en ' + city : ' en Colombia'}`, url: `https://www.google.com/search?q=${encodeURIComponent(material + ' distribuidor mayorista ' + (city || 'Colombia'))}` },
+    { label: 'Mercado Libre Colombia', url: `https://listado.mercadolibre.com.co/${encodeURIComponent(material.trim().replace(/\s+/g, '-'))}` },
+    { label: `Google Maps — fábricas y depósitos cerca${city ? ' de ' + city : ''}`, url: `https://www.google.com/maps/search/${encodeURIComponent('fabrica de ' + material + (city ? ' en ' + city : ' Colombia'))}` },
+    { label: 'Directorio de proveedores — Camacol Bogotá y Cundinamarca', url: 'https://camacolbyc.co/directorio-de-proveedores.html' },
+    { label: `Google — importación directa de "${material}" (sin intermediarios)`, url: `https://www.google.com/search?q=${encodeURIComponent('importador directo ' + material + ' Colombia sin intermediarios')}` }
+  ];
+  let html = '<h3>Enlaces para ampliar tu búsqueda</h3><ul class="link-list">';
+  links.forEach(l => { html += `<li><a href="${l.url}" target="_blank" rel="noopener">${l.label} ↗</a></li>`; });
+  html += '</ul>';
+  area.innerHTML = html;
+}
+
+async function suggestManufacturers() {
+  const material = document.getElementById('f-search-material').value.trim();
+  const city = document.getElementById('f-search-city').value.trim();
+  const area = document.getElementById('ai-manufacturers-area');
+  if (!material) { alert('Escribe el material que buscas.'); return; }
+  area.innerHTML = '<p class="hint">Consultando...</p>';
+  try {
+    const res = await fetch(`${API}/ai/manufacturers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ material, city }) });
+    const data = await res.json();
+    if (!res.ok) { area.innerHTML = `<p class="hint">${data.error || 'No disponible.'}</p>`; return; }
+    if (!data.names || !data.names.length) { area.innerHTML = '<p class="hint">La IA no tiene suficiente confianza para sugerir fabricantes de este material — usa los enlaces de búsqueda de arriba.</p>'; return; }
+    let html = '<h3>Fabricantes/distribuidores conocidos (sugerencia de IA)</h3><ul class="link-list">';
+    data.names.forEach(name => {
+      const gUrl = `https://www.google.com/search?q=${encodeURIComponent(name + ' contacto telefono Colombia')}`;
+      const mUrl = `https://www.google.com/maps/search/${encodeURIComponent(name + (city ? ' ' + city : ' Colombia'))}`;
+      html += `<li><strong>${name}</strong> — <a href="${gUrl}" target="_blank" rel="noopener">buscar contacto ↗</a> · <a href="${mUrl}" target="_blank" rel="noopener">ver en el mapa ↗</a></li>`;
+    });
+    html += '</ul><p class="ai-disclaimer">Sugerido por IA a partir de conocimiento general, no de una búsqueda en tiempo real — verifica siempre directamente antes de contactar.</p>';
+    area.innerHTML = html;
+  } catch (e) { area.innerHTML = '<p class="hint">No se pudo consultar la IA en este momento.</p>'; }
+}
+
+function openReteicaHelp() {
+  const city = document.getElementById('f-city').value.trim() || 'Colombia';
+  window.open(`https://www.google.com/search?q=${encodeURIComponent('tarifa retención ICA industria y comercio ' + city)}`, '_blank', 'noopener');
+}
+
+async function suggestReteica() {
+  const city = document.getElementById('f-city').value.trim();
+  const area = document.getElementById('reteica-ai-area');
+  if (!city) { alert('Escribe primero la ciudad de despacho.'); return; }
+  area.innerHTML = '<p class="hint">Consultando...</p>';
+  try {
+    const res = await fetch(`${API}/ai/reteica`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ city }) });
+    const data = await res.json();
+    if (!res.ok) { area.innerHTML = `<p class="hint">${data.error || 'No disponible.'}</p>`; return; }
+    if (data.rango) area.innerHTML = `<p class="insight insight-info"><strong>Referencia para ${city}:</strong> ${data.rango}.</p><p class="ai-disclaimer">${data.nota || 'Solo referencial — confírmalo con tu proveedor o la Secretaría de Hacienda municipal.'} No se autocompletó el campo.</p>`;
+    else area.innerHTML = `<p class="hint">No hay una referencia confiable para ${city}. Usa el buscador o pregúntale a tu proveedor.</p>`;
+  } catch (e) { area.innerHTML = '<p class="hint">No se pudo consultar la IA en este momento.</p>'; }
+}
+
+/* ---------- Garantía técnica: selects con "otro" ---------- */
+
+function toggleGarantiaCustom() { document.getElementById('f-garantia-custom-wrap').style.display = document.getElementById('f-garantia-riesgo').value === 'custom' ? 'block' : 'none'; }
+function toggleGarantiaDiasCustom() { document.getElementById('f-garantia-dias-custom-wrap').style.display = document.getElementById('f-garantia-dias-select').value === 'custom' ? 'block' : 'none'; }
+
+function setGarantiaFields(pct, dias) {
+  const pctOptions = ['0', '5', '10']; const pctSel = document.getElementById('f-garantia-riesgo');
+  if (pct != null) { const s = String(pct); if (pctOptions.includes(s)) pctSel.value = s; else { pctSel.value = 'custom'; document.getElementById('f-garantia-custom').value = pct; } }
+  toggleGarantiaCustom();
+  const diasOptions = ['0', '30', '60', '90', '180']; const diasSel = document.getElementById('f-garantia-dias-select');
+  if (dias != null) { const s = String(dias); if (diasOptions.includes(s)) diasSel.value = s; else { diasSel.value = 'custom'; document.getElementById('f-garantia-dias-custom').value = dias; } }
+  toggleGarantiaDiasCustom();
+}
+
+/* ---------- Ítems de la cotización ---------- */
+
+function addItemRow(values) {
+  const container = document.getElementById('items-container');
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = `
+    <div><div class="mini-label">Material</div><input class="it-material" type="text" placeholder="Ej: Tubo conduflex 1/2&quot;" value="${values && values.material ? values.material.replace(/"/g,'&quot;') : ''}"></div>
+    <div><div class="mini-label">Cantidad</div><input class="it-qty" type="number" min="0" step="any" placeholder="100" value="${values && values.qty != null ? values.qty : ''}"></div>
+    <div><div class="mini-label">Precio unitario ($)</div><input class="it-price" type="number" min="0" step="any" placeholder="1200" value="${values && values.price != null ? values.price : ''}"></div>
+    <div><div class="mini-label">Disponible ahora <span class="opt">vacío=todo</span></div><input class="it-disponible" type="number" min="0" step="any" placeholder="100" value="${values && values.disponible != null ? values.disponible : ''}"></div>
+    <button class="btn-ghost" onclick="this.closest('.item-row').remove()">Quitar</button>
+  `;
+  container.appendChild(row);
+}
+
+function resetItemRows() { document.getElementById('items-container').innerHTML = ''; addItemRow(); }
+
+function collectItems() {
+  return Array.from(document.querySelectorAll('#items-container .item-row')).map(row => {
+    const qty = parseFloat(row.querySelector('.it-qty').value);
+    const dispRaw = row.querySelector('.it-disponible').value;
+    return {
+      material: row.querySelector('.it-material').value.trim(),
+      qty, price: parseFloat(row.querySelector('.it-price').value),
+      disponible: dispRaw === '' ? qty : parseFloat(dispRaw)
+    };
+  }).filter(it => it.material && !isNaN(it.qty) && it.qty > 0 && !isNaN(it.price));
+}
+
+/* ---------- Cotizaciones ---------- */
+
+async function loadQuotes() {
+  quotesCache = await (await fetch(`${API}/quotes`)).json();
+  renderQuotes(quotesCache);
+  renderItemsCompare(quotesCache);
+}
+
+async function loadProviders() { providersCache = await (await fetch(`${API}/providers`)).json(); renderProviders(providersCache); }
+async function loadOrdersInProgress() { ordersInProgressCache = await (await fetch(`${API}/orders/in-progress`)).json(); renderPedidos(); }
+async function loadOrdersCompleted() { ordersCompletedCache = await (await fetch(`${API}/orders/completed`)).json(); }
+
+async function saveQuote() {
+  const provider = document.getElementById('f-provider').value.trim();
+  const items = collectItems();
+  if (!provider) { alert('Escribe el nombre del proveedor.'); return; }
+  if (items.length === 0) { alert('Agrega al menos un ítem válido (material, cantidad y precio).'); return; }
+
+  const garantiaSel = document.getElementById('f-garantia-riesgo').value;
+  const garantiaPct = garantiaSel === 'custom' ? (parseFloat(document.getElementById('f-garantia-custom').value) || 0) : parseFloat(garantiaSel);
+  const garantiaDiasSel = document.getElementById('f-garantia-dias-select').value;
+  const garantiaDias = garantiaDiasSel === 'custom' ? (parseFloat(document.getElementById('f-garantia-dias-custom').value) || 0) : parseFloat(garantiaDiasSel);
+
+  const body = {
+    provider,
+    phone: document.getElementById('f-phone').value.trim() || null,
+    days: document.getElementById('f-days').value || null,
+    pago: document.getElementById('f-pago').value.trim() || null,
+    iva: parseFloat(document.getElementById('f-iva').value) || 0,
+    transp: parseFloat(document.getElementById('f-transp').value) || 0,
+    city: document.getElementById('f-city').value.trim() || null,
+    anticipoPct: parseFloat(document.getElementById('f-anticipo').value) || 0,
+    declarante: document.getElementById('f-declarante').value,
+    reteicaPct: parseFloat(document.getElementById('f-reteica').value) || 0,
+    garantiaPct, garantiaDias, items
+  };
+
+  const res = await fetch(`${API}/quotes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) { const err = await res.json(); alert(err.error || 'No se pudo guardar la cotización.'); return; }
+
+  ['f-provider','f-phone','f-days','f-pago','f-iva','f-transp','f-city','f-anticipo','f-reteica'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('f-declarante').value = 'si';
+  document.getElementById('f-garantia-riesgo').value = '0'; document.getElementById('f-garantia-dias-select').value = '0';
+  toggleGarantiaCustom(); toggleGarantiaDiasCustom();
+  document.getElementById('reteica-ai-area').innerHTML = '';
+  resetItemRows();
+  loadQuotes(); loadProviders(); renderPresupuesto();
+}
+
+async function removeQuote(id) { await fetch(`${API}/quotes/${id}`, { method: 'DELETE' }); loadQuotes(); }
+
+async function markAsOrdered(quoteId) {
+  const res = await fetch(`${API}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId }) });
+  if (!res.ok) { const err = await res.json(); alert(err.error); return; }
+  loadOrdersInProgress(); renderPresupuesto();
+}
+
+function whatsappLink(q) {
+  const phone = (q.phone || '').replace(/\D/g, '');
+  if (!phone) return null;
+  const resumen = q.items.map(it => `${it.qty} ${it.material}`).join(', ');
+  const msg = `Hola, confirmo el pedido de esta cotización (${resumen}) por un total de $${fmt(q.total)}. ¿Cómo seguimos con la compra?`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+}
+
+function reliabilityBadgeFor(name) {
+  const p = providersCache.find(x => x.name.toLowerCase() === name.toLowerCase());
+  if (!p || !p.stats) return '<span class="provider-sub">Sin historial aún</span>';
+  const st = p.stats;
+  const label = st.qualityAvg >= 85 ? 'Buena' : st.qualityAvg >= 60 ? 'Regular' : 'Baja';
+  return `<span class="provider-sub">${fmt(st.onTimePct)}% a tiempo · Calidad ${label} (${st.orders} pedido${st.orders === 1 ? '' : 's'})</span>`;
+}
+
+function priceTrendHTML(material, price) {
+  const key = material.trim().toLowerCase();
+  const past = [];
+  ordersCompletedCache.forEach(o => (o.items || []).forEach(it => { if (it.material.trim().toLowerCase() === key) past.push(it.price); }));
+  if (!past.length) return '';
+  const avg = past.reduce((a, b) => a + b, 0) / past.length;
+  if (avg === 0) return '';
+  const diffPct = ((price - avg) / avg) * 100;
+  if (diffPct > 3) return `<span class="price-trend-up">▲ ${fmtPct(diffPct)}% vs tu histórico ($${fmt(avg)})</span>`;
+  if (diffPct < -3) return `<span class="price-trend-down">▼ ${fmtPct(Math.abs(diffPct))}% vs tu histórico ($${fmt(avg)})</span>`;
+  return `<span class="price-trend-flat">≈ en línea con tu histórico ($${fmt(avg)})</span>`;
+}
+
+const LEAD_TIME_HINTS = [
+  { match: /(varilla|acero|hierro)/i, days: 15, note: 'el acero de refuerzo suele gestionarse con ≥15 días de anticipación' },
+  { match: /(concreto|mezcla premezclad|mixer)/i, days: 1, note: 'el concreto premezclado normalmente se confirma con 24 h' },
+  { match: /cemento/i, days: 3, note: 'el cemento suele conseguirse en 2-3 días, salvo escasez en temporada alta' },
+  { match: /(ladrillo|bloque|mamposter)/i, days: 7, note: 'la mampostería puede tardar según disponibilidad local' },
+];
+function leadTimeWarning(material, days) {
+  const hint = LEAD_TIME_HINTS.find(h => h.match.test(material));
+  if (!hint) return '';
+  const d = parseFloat(days) || 0;
+  return d < hint.days ? `<span class="lead-warn">⚠ ${hint.note} (cotizado: ${d} días)</span>` : '';
+}
+
+function renderQuotes(quotes) {
+  const area = document.getElementById('quotes-area');
+  if (quotes.length === 0) { area.innerHTML = '<p class="empty">Aún no hay cotizaciones registradas. Agrega al menos dos para comparar.</p>'; return; }
+
+  const minTotal = Math.min(...quotes.map(q => q.total));
+  let html = '';
+
+  quotes.forEach(q => {
+    const isBest = q.total === minTotal;
+    const wa = whatsappLink(q);
+    let itemsHtml = '<table><thead><tr><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>Disponibilidad</th><th>Subtotal</th></tr></thead><tbody>';
+    q.items.forEach(it => {
+      const stockTag = it.disponible >= it.qty ? '<span class="tag-best">Stock completo</span>' : (it.disponible > 0 ? `<span class="tag-partial">Parcial: ${fmt(it.disponible)}/${fmt(it.qty)}</span>` : '<span class="tag-nostock">Sin stock</span>');
+      itemsHtml += `<tr><td>${it.material}${leadTimeWarning(it.material, q.days)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.price)}${priceTrendHTML(it.material, it.price)}</td><td>${stockTag}</td><td>$${fmt(it.subtotal)}</td></tr>`;
+    });
+    itemsHtml += '</tbody></table>';
+
+    let retencionesHtml = '';
+    if (q.retefuenteMonto > 0) retencionesHtml += `<div class="provider-sub">Retefuente ${fmtPct(q.retefuentePct)}%: $${fmt(q.retefuenteMonto)}</div>`;
+    else if (settings.esRetenedor && !q.superaBaseRetefuente) retencionesHtml += `<div class="provider-sub">Sin retefuente (no supera 10 UVT)</div>`;
+    if (q.reteicaMonto > 0) retencionesHtml += `<div class="provider-sub">ReteICA: $${fmt(q.reteicaMonto)}</div>`;
+    if (q.garantiaMonto > 0) retencionesHtml += `<div class="provider-sub">Garantía ${q.garantiaPct}%: $${fmt(q.garantiaMonto)} (libera en ${q.garantiaDias || '—'} días)</div>`;
+    if (q.financeCost > 0) retencionesHtml += `<div class="provider-sub">Costo financiero del anticipo: $${fmt(q.financeCost)}</div>`;
+    if (retencionesHtml) retencionesHtml = `<div style="margin-top:8px;">${retencionesHtml}<div class="provider-sub"><strong>Neto inmediato al proveedor: $${fmt(q.netoInmediatoProveedor)}</strong></div></div>`;
+
+    html += `<div class="quote-card ${isBest ? 'best' : ''}">
+      <div class="quote-head">
+        <div><div class="provider">${q.provider}</div>${isBest ? '<span class="tag-best">Mejor opción</span>' : ''}${reliabilityBadgeFor(q.provider)}</div>
+        <div class="total">$${fmt(q.total)}</div>
+      </div>
+      <div class="quote-meta">IVA: $${fmt(q.ivaValue)} · Transporte: $${fmt(q.transp)} · Ciudad: ${q.city || '—'} · Entrega: ${q.days ? q.days + ' días' : '—'} · Pago: ${q.pago || '—'}${q.anticipoPct ? ' (' + q.anticipoPct + '% anticipo)' : ''}</div>
+      <div class="table-scroll">${itemsHtml}</div>
+      ${retencionesHtml}
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+        ${wa ? `<a class="btn-whatsapp" href="${wa}" target="_blank" rel="noopener">Contactar por WhatsApp</a>` : ''}
+        <button class="btn-ghost" onclick="markAsOrdered('${q.id}')">Marcar pedido realizado</button>
+        <button class="btn-ghost" onclick="removeQuote('${q.id}')">Quitar cotización</button>
+      </div>
+    </div>`;
+  });
+
+  area.innerHTML = html;
+  renderPlanRecomendado(quotes);
+}
+
+/* ---------- Mejor precio por material + plan combinado ---------- */
+
+function pickBestForMaterial(candidates) {
+  // candidates: [{provider, allIn, item, qDays}]
+  const sorted = [...candidates].sort((a, b) => a.allIn - b.allIn);
+  const cheapest = sorted[0];
+  if ((settings.tolerancia || 0) <= 0 || sorted.length === 1) return { chosen: cheapest, reason: 'price', cheapest };
+  const cheapestProv = providersCache.find(p => p.name.toLowerCase() === cheapest.provider.toLowerCase());
+  const cheapestScore = cheapestProv && cheapestProv.stats ? (cheapestProv.stats.onTimePct + cheapestProv.stats.qualityAvg) / 2 : null;
+  let chosen = cheapest, reason = 'price';
+  for (const cand of sorted.slice(1)) {
+    if (cand.allIn > cheapest.allIn * (1 + settings.tolerancia / 100)) continue;
+    const prov = providersCache.find(p => p.name.toLowerCase() === cand.provider.toLowerCase());
+    if (!prov || !prov.stats) continue;
+    const score = (prov.stats.onTimePct + prov.stats.qualityAvg) / 2;
+    if (score - (cheapestScore || 0) >= 15) { chosen = cand; reason = 'reliability'; break; }
+  }
+  return { chosen, reason, cheapest };
+}
+
+function renderItemsCompare(quotes) {
+  const byMaterial = {};
+  quotes.forEach(q => q.items.forEach(it => {
+    const key = it.material.trim().toLowerCase();
+    if (!byMaterial[key]) byMaterial[key] = { label: it.material, candidates: [] };
+    byMaterial[key].candidates.push({ provider: q.provider, allIn: it.price * (1 + (q.iva || 0) / 100), item: it, qDays: q.days, disponible: it.disponible, qty: it.qty });
+  }));
+  return byMaterial;
+}
+
+function renderPlanRecomendado(quotes) {
+  const insightCard = document.getElementById('insight-card');
+  const box = document.getElementById('insight-text');
+  if (quotes.length < 2) { insightCard.style.display = 'none'; return; }
+
+  const byMaterial = renderItemsCompare(quotes);
+  const materials = Object.values(byMaterial);
+  const multi = materials.filter(m => new Set(m.candidates.map(c => c.provider)).size >= 2);
+
+  let out = '';
+  if (multi.length > 0) {
+    out += '<h3>Mejor precio por material (entre proveedores)</h3>';
+    out += '<p class="hint">Compara precio unitario + IVA de cada ítem — el flete, el anticipo y las retenciones dependen de la cotización completa de cada proveedor; revísalos en su tarjeta.</p>';
+    out += '<div class="table-scroll"><table><thead><tr><th>Material</th><th>Mejor opción</th><th>Precio todo incluido</th><th>Disponibilidad</th></tr></thead><tbody>';
+    multi.forEach(m => {
+      const pick = pickBestForMaterial(m.candidates);
+      const c = pick.chosen;
+      const stockTag = c.disponible >= c.qty ? '<span class="tag-best">Stock completo</span>' : (c.disponible > 0 ? `<span class="tag-partial">Parcial</span>` : '<span class="tag-nostock">Sin stock</span>');
+      const reasonNote = pick.reason === 'reliability' ? ' <span class="provider-sub">(elegido por confiabilidad, no el más barato)</span>' : '';
+      out += `<tr><td>${m.label}</td><td>${c.provider}${reasonNote}</td><td>$${fmt(c.allIn)}</td><td>${stockTag}</td></tr>`;
+    });
+    out += '</tbody></table></div>';
+
+    // Un solo proveedor vs combinar
+    const allMaterialKeys = materials.map(m => m.label.trim().toLowerCase());
+    const providerNames = [...new Set(quotes.map(q => q.provider))];
+    let singleBest = null;
+    providerNames.forEach(name => {
+      let coversAll = true, total = 0;
+      allMaterialKeys.forEach(key => {
+        const cand = (byMaterial[key].candidates || []).find(c => c.provider === name && c.disponible >= c.qty);
+        if (!cand) { coversAll = false; return; }
+        total += cand.allIn * cand.qty;
+      });
+      if (coversAll && (!singleBest || total < singleBest.total)) singleBest = { name, total };
+    });
+
+    let mixedTotal = 0; const mixedProviders = new Set();
+    materials.forEach(m => { const pick = pickBestForMaterial(m.candidates); mixedTotal += pick.chosen.allIn * pick.chosen.qty; mixedProviders.add(pick.chosen.provider); });
+
+    if (mixedProviders.size > 1) {
+      out += '<h3>¿Un solo proveedor o compra combinada?</h3>';
+      if (singleBest) {
+        const savings = singleBest.total - mixedTotal;
+        const savingsPct = (savings / singleBest.total) * 100;
+        out += `<div class="plan-box"><h4>Opción A — Todo con ${singleBest.name}</h4><div class="total-line">$${fmt(singleBest.total)}</div>
+          <ul><li>Un solo pedido, un solo envío, más poder de negociación por volumen.</li></ul></div>
+          <div class="plan-box"><h4>Opción B — Mejor proveedor por material</h4><div class="total-line">$${fmt(mixedTotal)}</div>
+          <div class="cons-title">Contras de combinar:</div>
+          <ul><li>Vas a recibir ${mixedProviders.size} envíos distintos, cada uno con su propio flete (revísalo en cada cotización).</li>
+          <li>Vas a manejar ${mixedProviders.size} relaciones de pago distintas en vez de una sola.</li>
+          <li>Pierdes el descuento por volumen total de comprarle todo a uno solo.</li></ul></div>`;
+        if (savings > 0 && savingsPct >= 3) out += `<div class="badge-verdict badge-mixed">Recomendación: compra combinada — ahorras $${fmt(savings)} (${fmtPct(savingsPct)}%)</div>`;
+        else out += `<div class="badge-verdict badge-single">Recomendación: un solo proveedor (${singleBest.name}) — combinar apenas ahorra ${fmtPct(Math.max(0,savingsPct))}%, no compensa la complejidad</div>`;
+      } else {
+        out += `<div class="plan-box"><h4>Compra combinada (ningún proveedor cubre todo)</h4><div class="total-line">$${fmt(mixedTotal)}</div>
+        <p class="hint">Ningún proveedor registrado tiene stock completo de todos los materiales — necesitas combinar, o conseguir otra cotización.</p></div>`;
+      }
+    }
+  }
+
+  out += renderConcentrationRiskHTML() + renderConsolidationAlertHTML();
+
+  box.innerHTML = out;
+  insightCard.style.display = out ? 'block' : 'none';
+}
+
+function renderConcentrationRiskHTML() {
+  if (ordersCompletedCache.length === 0) return '';
+  const spend = {};
+  ordersCompletedCache.forEach(o => { spend[o.provider] = (spend[o.provider] || 0) + o.total; });
+  const total = Object.values(spend).reduce((a, b) => a + b, 0);
+  if (total === 0) return '';
+  const entries = Object.entries(spend).map(([name, s]) => ({ name, spend: s, pct: (s / total) * 100 })).sort((a, b) => b.spend - a.spend);
+  if (entries.length < 2) return '';
+  const risky = entries.filter(e => e.pct >= 65);
+  let html = '<h3>Riesgo de concentración de proveedores</h3><table><thead><tr><th>Proveedor</th><th>Gasto histórico</th><th>% del total</th></tr></thead><tbody>';
+  entries.forEach(e => { html += `<tr><td>${e.name}</td><td>$${fmt(e.spend)}</td><td>${fmtPct(e.pct)}%</td></tr>`; });
+  html += '</tbody></table>';
+  if (risky.length) html += `<div class="badge-verdict badge-risk">Riesgo de dependencia</div><p class="insight">${risky.map(r=>r.name).join(', ')} concentra${risky.length===1?'':'n'} más del 65% de tu gasto histórico — conviene mantener al menos una segunda fuente calificada.</p>`;
+  return html;
+}
+
+function renderConsolidationAlertHTML() {
+  if (ordersCompletedCache.length < 3) return '';
+  const cutoff = Date.now() - 90 * 86400000;
+  const byMaterial = {};
+  ordersCompletedCache.filter(o => new Date(o.fecha).getTime() >= cutoff).forEach(o => (o.items || []).forEach(it => {
+    const key = it.material.trim().toLowerCase();
+    if (!byMaterial[key]) byMaterial[key] = { label: it.material, count: 0, prices: [], qty: 0, spend: 0 };
+    byMaterial[key].count += 1; byMaterial[key].prices.push(it.price); byMaterial[key].qty += it.qty; byMaterial[key].spend += it.qty * it.price;
+  }));
+  const fragmented = Object.values(byMaterial).filter(m => m.count >= 3);
+  if (!fragmented.length) return '';
+  let html = '<h3>Consolidación de compras</h3><p class="insight insight-info">Comprar el mismo material muchas veces en pequeñas cantidades, a precios que varían, es un problema común en pymes constructoras en Colombia — en vez de eso, considera consolidar en una sola orden y negociar por volumen.</p>';
+  fragmented.forEach(m => {
+    const min = Math.min(...m.prices), max = Math.max(...m.prices);
+    const variacion = min > 0 ? ((max - min) / min) * 100 : 0;
+    html += `<p class="insight insight-info"><strong>${m.label}:</strong> ${m.count} compras en 90 días (${fmt(m.qty)} unid., $${fmt(m.spend)})${variacion > 5 ? `, precios entre $${fmt(min)} y $${fmt(max)} (${fmtPct(variacion)}% de variación)` : ''}.</p>`;
+  });
+  return html;
+}
+
+/* ---------- Pedidos en curso ---------- */
+
+function renderPedidos() {
+  const area = document.getElementById('pedidos-area');
+  if (ordersInProgressCache.length === 0) { area.innerHTML = '<p class="empty">No tienes pedidos en curso.</p>'; return; }
+  let html = '';
+  ordersInProgressCache.forEach(p => {
+    const fechaEsperada = new Date(new Date(p.fechaPedido).getTime() + p.diasPrometidos * 86400000).toISOString().slice(0, 10);
+    html += `<div class="pedido-item">
+      <div class="pedido-head"><span><strong>${p.provider}</strong> · ${p.resumen} · $${fmt(p.total)}</span>
+      <span class="provider-sub">Pedido: ${p.fechaPedido} · Entrega esperada: ${fechaEsperada}</span></div>
+      <div class="pedido-controls">
+        <div><label>¿Llegó a tiempo?</label><select id="ot-${p.id}"><option value="si">Sí</option><option value="no">No</option></select></div>
+        <div><label>Calidad recibida</label><select id="q-${p.id}"><option value="buena">Buena</option><option value="regular">Regular</option><option value="mala">Mala</option></select></div>
+        <div><button class="btn-primary btn-small" onclick="registrarResultado('${p.id}')">Registrar resultado</button></div>
+      </div></div>`;
+  });
+  area.innerHTML = html;
+}
+
+async function registrarResultado(id) {
+  const onTime = document.getElementById('ot-' + id).value === 'si';
+  const quality = document.getElementById('q-' + id).value;
+  await fetch(`${API}/orders/${id}/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ onTime, quality }) });
+  await Promise.all([loadOrdersInProgress(), loadOrdersCompleted(), loadProviders()]);
+  loadQuotes(); renderPresupuesto();
+}
+
+/* ---------- Proveedores ---------- */
+
+function renderProviders(providers) {
+  const area = document.getElementById('providers-area');
+  if (providers.length === 0) { area.innerHTML = '<p class="empty">Aún no tienes proveedores guardados.</p>'; return; }
+  const totalSpend = providers.reduce((s, p) => s + (p.spend || 0), 0);
+  let html = '<table><thead><tr><th>Proveedor</th><th>Pedidos</th><th>% a tiempo</th><th>Calidad</th><th>Gasto acumulado</th><th>% de tu gasto</th><th></th></tr></thead><tbody>';
+  providers.forEach(p => {
+    const st = p.stats;
+    const pct = totalSpend > 0 ? ((p.spend || 0) / totalSpend) * 100 : 0;
+    const digits = (p.phone || '').replace(/\D/g, '');
+    const label = st ? (st.qualityAvg >= 85 ? 'Buena' : st.qualityAvg >= 60 ? 'Regular' : 'Baja') : '—';
+    html += `<tr><td>${p.name}</td><td>${st ? st.orders : '—'}</td><td>${st ? fmt(st.onTimePct) + '%' : 'Sin historial'}</td><td>${label}</td><td>$${fmt(p.spend || 0)}</td><td>${totalSpend > 0 ? fmtPct(pct) + '%' : '—'}</td><td>${digits ? `<a class="btn-whatsapp" href="https://wa.me/${digits}" target="_blank" rel="noopener">Escribir</a>` : ''}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  area.innerHTML = html;
+}
+
+/* ---------- Extracción con IA ---------- */
+
+async function extractQuote() {
+  const text = document.getElementById('f-paste').value.trim();
+  const status = document.getElementById('extract-status');
+  if (!text) { status.textContent = 'Pega primero el texto de la cotización.'; return; }
+  status.textContent = 'Leyendo la cotización...';
+  try {
+    const res = await fetch(`${API}/extract`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    const result = await res.json();
+    if (!res.ok) { status.textContent = result.error || 'No se pudo leer la cotización.'; return; }
+
+    if (result.provider) document.getElementById('f-provider').value = result.provider;
+    if (result.phone) document.getElementById('f-phone').value = result.phone;
+    if (result.days != null) document.getElementById('f-days').value = result.days;
+    if (result.pago) document.getElementById('f-pago').value = result.pago;
+    if (result.iva != null) document.getElementById('f-iva').value = result.iva;
+    if (result.transp != null) document.getElementById('f-transp').value = result.transp;
+    if (result.city) document.getElementById('f-city').value = result.city;
+    if (result.anticipoPct != null) document.getElementById('f-anticipo').value = result.anticipoPct;
+    if (result.declarante) document.getElementById('f-declarante').value = result.declarante;
+    if (result.reteicaPct != null) document.getElementById('f-reteica').value = result.reteicaPct;
+    setGarantiaFields(result.garantiaPct, result.garantiaDias);
+
+    if (Array.isArray(result.items) && result.items.length > 0) {
+      document.getElementById('items-container').innerHTML = '';
+      result.items.forEach(it => addItemRow(it));
+    }
+    status.textContent = 'Listo — revisa los datos y los ítems antes de guardar.';
+  } catch (e) { status.textContent = 'No se pudo leer la cotización. Intenta completar el formulario a mano.'; }
+}
+
+/* ---------- Init ---------- */
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+resetItemRows();
+toggleGarantiaCustom(); toggleGarantiaDiasCustom();
+
+(async function init() {
+  await loadSettings();
+  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget()]);
+  await loadQuotes();
+})();
+</script>
+</body>
+</html>
