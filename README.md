@@ -85,6 +85,22 @@ Este proyecto ya es una API real — el mismo backend puede alimentar una app na
 
 ---
 
+## 7. Novedades de Nexobra Mercado (comparador de cotizaciones avanzado)
+
+`mercado.html` y `server.js` ahora incluyen un comparador de cotizaciones mucho más completo, pensado según la forma en que trabajan las áreas de compras profesionales (costo total, no solo precio) y ajustado a la normativa tributaria colombiana:
+
+- **Comparación real (TCO), no solo precio**: cada cotización calcula precio + IVA + transporte + costo financiero del anticipo (si se configura un costo de capital anual) + retenciones, para mostrar el costo total real de comprarle a cada proveedor.
+- **Retenciones colombianas automáticas**: retención en la fuente (2.5%/3.5% según si el proveedor es declarante, con la base mínima legal de 10 UVT), ReteICA (con un botón "Sugerir con IA" que da una referencia — nunca reemplaza confirmar la tarifa exacta con la Secretaría de Hacienda del municipio, porque varía por actividad económica y cambia con el tiempo) y retención de garantía técnica (explicada en lenguaje sencillo, con opciones típicas de 5-10% y plazos de liberación de 30/60/90/180 días).
+- **Plan de compra recomendado**: por cada material, sugiere el mejor proveedor considerando precio, disponibilidad de stock y confiabilidad histórica (% de pedidos a tiempo y calidad reportada), y avisa cuándo conviene dividir la compra entre dos proveedores (mostrando siempre el ahorro real y las desventajas de tener dos entregas en vez de una).
+- **Alertas de riesgo de compras**: aviso si un solo proveedor concentra la mayoría del gasto (riesgo de dependencia) y aviso si hay compras fragmentadas del mismo material que convendría consolidar en un solo pedido.
+- **Presupuesto de obra y compra anticipada**: se registran las cantidades totales presupuestadas por material; la app sugiere cotizar y negociar anticipadamente el 60% de esas cantidades (porcentaje configurable) y avisa cuándo reabastecer al llegar al 15% restante (también configurable), para evitar pedidos de última hora y demoras en obra.
+- **Importar presupuesto desde Excel o PDF**: se puede adjuntar el archivo de presupuesto (con muchos ítems divididos en actividades o módulos) y la app reconoce el contenido automáticamente — con IA para los casos más difíciles de interpretar — mostrando siempre una vista previa editable antes de guardar nada (nunca se importa sin revisión humana). Los PDF escaneados como imagen no se pueden leer automáticamente (no hay OCR); en ese caso, la alternativa es adjuntar el archivo directamente en una conversación de Claude para pedir ayuda a convertirlo primero.
+- **Búsqueda ampliada de materiales y fabricantes**: enlaces de búsqueda rápida en mercados más grandes y sugerencias de fabricantes/distribuidores directos (con IA, siempre como referencia a confirmar) para materiales difíciles de cotizar localmente o que requieren pedido por encargo, buscando evitar intermediarios.
+
+Todas las sugerencias generadas con IA (fabricantes, ReteICA, extracción de presupuestos) se muestran siempre como una ayuda de referencia, nunca se guardan automáticamente sin que la persona las revise y confirme.
+
+---
+
 ## Estructura del proyecto
 
 ```
