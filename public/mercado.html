@@ -109,6 +109,8 @@
   .link-list li { margin-bottom:8px; }
   .link-list a { color: var(--accent); text-decoration:none; font-weight:700; font-size:14px; }
   .link-list a:hover { text-decoration:underline; }
+  .unify-suggestion { border:1px solid var(--warn); background:var(--warn-bg); padding:12px 14px; margin-bottom:10px; }
+  .unify-suggestion p { margin:0 0 8px; font-size:14px; }
   .ai-disclaimer { font-size:12px; color: var(--ink-soft); font-style:italic; margin-top:8px; }
   .import-preview td { white-space:normal; vertical-align:top; }
   .import-preview input[type="text"] { min-width:160px; }
@@ -134,6 +136,7 @@
     <div class="settings-row">
       <div><label for="s-capital">Costo de tu capital / oportunidad (% anual) <span class="opt">— 0 = ignorar</span></label><input id="s-capital" type="number" min="0" step="any"></div>
       <div><label for="s-tolerancia">Sobreprecio máximo por un proveedor más confiable (%) <span class="opt">— 0 = elegir siempre el más barato</span></label><input id="s-tolerancia" type="number" min="0" step="any"></div>
+      <div><label for="s-completitud">Ahorro mínimo para justificar dividir la compra (%) <span class="opt">— si combinar proveedores ahorra menos que esto, se recomienda comprarle todo a quien cubra el pedido completo</span></label><input id="s-completitud" type="number" min="0" step="any"></div>
     </div>
     <div class="checkbox-row"><input type="checkbox" id="s-retenedor"><label for="s-retenedor">Mi empresa es agente autorretenedor / practica retención en la fuente a proveedores</label></div>
     <p class="hint" style="margin-top:6px;">Si lo marcas, se calcula la retefuente a practicar (2,5% declarante / 3,5% no declarante, sobre compras que superen 10 UVT ≈ $498.000 en 2025 — valor referencial). No aumenta tu costo: es dinero que igual pagas, solo que una parte va directo a la DIAN.</p>
@@ -250,6 +253,20 @@
     <div id="quotes-area"><p class="empty">Cargando…</p></div>
   </div>
 
+  <div class="card" id="unify-card" style="display:none;">
+    <h2>¿Son el mismo material?</h2>
+    <p class="hint">Cada proveedor nombra sus productos a su manera. Antes de calcular el plan de compra, confirma cuáles nombres se refieren al mismo material — así el comparador puede saber si un proveedor realmente cubre tu pedido completo. Nunca se unifican solos: siempre lo confirmas tú, porque podrían ser productos distintos (marca, modelo, calidad).</p>
+    <div id="unify-area"></div>
+    <h3>Unificar manualmente</h3>
+    <p class="hint">Si el sistema no detectó una coincidencia, únelos aquí a mano.</p>
+    <div class="field-grid">
+      <div><label for="u-name1">Nombre en la cotización 1</label><input id="u-name1" type="text" placeholder='Ej: Válvula Compuerta elástica 2" HD'></div>
+      <div><label for="u-name2">Nombre en la cotización 2</label><input id="u-name2" type="text" placeholder='Ej: Válvula compuerta elástica BR 2" APOLO'></div>
+      <div><label for="u-canonical">Nombre unificado a mostrar</label><input id="u-canonical" type="text" placeholder='Ej: Válvula compuerta elástica 2"'></div>
+    </div>
+    <button class="btn-primary" onclick="manualUnify()">Unificar estos materiales</button>
+  </div>
+
   <div class="card" id="insight-card" style="display:none;">
     <h2>Plan de compra recomendado</h2>
     <div id="insight-text"></div>
@@ -274,8 +291,127 @@ const API = '/api';
 function fmt(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(n || 0); }
 function fmtPct(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 }).format(n || 0); }
 
-let settings = { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15 };
-let quotesCache = [], providersCache = [], budgetCache = [], ordersInProgressCache = [], ordersCompletedCache = [];
+let settings = { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8 };
+let quotesCache = [], providersCache = [], budgetCache = [], ordersInProgressCache = [], ordersCompletedCache = [], materialAliasesCache = [];
+
+/* ---------- Unificación de materiales equivalentes ---------- */
+// Cada proveedor nombra sus productos a su manera ("Válvula 2\" HD" vs "Válvula BR 2\" APOLO").
+// Sin esto el comparador los trata como productos distintos y nunca detecta que un proveedor
+// cubre el pedido completo. La unificación SIEMPRE la confirma una persona.
+
+function normalizeMaterialTextClient(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+function materialTokens(s) { return normalizeMaterialTextClient(s).split(/\s+/).filter(Boolean); }
+
+function materialSimilarity(a, b) {
+  const ta = new Set(materialTokens(a)), tb = new Set(materialTokens(b));
+  const inter = [...ta].filter(t => tb.has(t));
+  const minLen = Math.min(ta.size, tb.size) || 1;
+  return { score: inter.length / minLen, hasNumericToken: inter.some(t => /[0-9]/.test(t)), sharedTokens: inter.length };
+}
+
+function looksLikeSameMaterial(a, b) {
+  const { score, hasNumericToken, sharedTokens } = materialSimilarity(a, b);
+  const eitherHasDigits = /[0-9]/.test(normalizeMaterialTextClient(a)) || /[0-9]/.test(normalizeMaterialTextClient(b));
+  if (eitherHasDigits) return score >= 0.5 && hasNumericToken && sharedTokens >= 2;
+  return score >= 0.6 && sharedTokens >= 2;
+}
+
+function canonicalMaterial(raw) {
+  const norm = normalizeMaterialTextClient(raw);
+  const group = materialAliasesCache.find(g => g.aliases.includes(norm));
+  if (group) return { key: normalizeMaterialTextClient(group.canonical), label: group.canonical };
+  return { key: norm, label: String(raw || '').trim() };
+}
+
+function getDismissedPairs() { try { return JSON.parse(localStorage.getItem('nexobra_dismissed_pairs') || '[]'); } catch (e) { return []; } }
+function dismissPairKey(a, b) { return [normalizeMaterialTextClient(a), normalizeMaterialTextClient(b)].sort().join('|||'); }
+function dismissPair(a, b) {
+  const list = getDismissedPairs(); const key = dismissPairKey(a, b);
+  if (!list.includes(key)) list.push(key);
+  try { localStorage.setItem('nexobra_dismissed_pairs', JSON.stringify(list)); } catch (e) {}
+}
+function isPairDismissed(a, b) { return getDismissedPairs().includes(dismissPairKey(a, b)); }
+
+async function loadMaterialAliases() { materialAliasesCache = await (await fetch(`${API}/material-aliases`)).json(); }
+
+async function unifyMaterials(name1, name2, canonical) {
+  const c = (canonical || name1 || '').trim();
+  if (!c) return;
+  await fetch(`${API}/material-aliases`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ canonical: c, names: [name1, name2] }) });
+  await loadMaterialAliases();
+  await loadQuotes();
+  renderMaterialUnification();
+}
+
+function manualUnify() {
+  const n1 = document.getElementById('u-name1').value.trim();
+  const n2 = document.getElementById('u-name2').value.trim();
+  const c = document.getElementById('u-canonical').value.trim() || n1;
+  if (!n1 || !n2) { alert('Escribe los dos nombres a unificar.'); return; }
+  unifyMaterials(n1, n2, c);
+  document.getElementById('u-name1').value = ''; document.getElementById('u-name2').value = ''; document.getElementById('u-canonical').value = '';
+}
+
+async function undoUnify(id) {
+  await fetch(`${API}/material-aliases/${id}`, { method: 'DELETE' });
+  await loadMaterialAliases();
+  await loadQuotes();
+  renderMaterialUnification();
+}
+
+function confirmSuggestion(idx) {
+  const s = (window.__unifySuggestions || [])[idx];
+  if (!s) return;
+  const canonical = prompt('¿Cómo quieres que se muestre este material unificado?', s.a.name);
+  if (canonical === null) return;
+  unifyMaterials(s.a.name, s.b.name, canonical || s.a.name);
+}
+function rejectSuggestion(idx) {
+  const s = (window.__unifySuggestions || [])[idx];
+  if (!s) return;
+  dismissPair(s.a.name, s.b.name);
+  renderMaterialUnification();
+}
+
+function renderMaterialUnification() {
+  const card = document.getElementById('unify-card');
+  const area = document.getElementById('unify-area');
+  if (!card) return;
+  const rawNames = [];
+  quotesCache.forEach(q => q.items.forEach(it => { if (!rawNames.some(r => r.name === it.material)) rawNames.push({ name: it.material, provider: q.provider }); }));
+
+  const suggestions = [];
+  for (let i = 0; i < rawNames.length; i++) {
+    for (let j = i + 1; j < rawNames.length; j++) {
+      const a = rawNames[i], b = rawNames[j];
+      if (canonicalMaterial(a.name).key === canonicalMaterial(b.name).key) continue;
+      if (isPairDismissed(a.name, b.name)) continue;
+      if (looksLikeSameMaterial(a.name, b.name)) suggestions.push({ a, b });
+    }
+  }
+  window.__unifySuggestions = suggestions;
+
+  let html = '';
+  if (suggestions.length > 0) {
+    html += '<h3>Posibles coincidencias detectadas</h3>';
+    suggestions.forEach((s, idx) => {
+      html += `<div class="unify-suggestion">
+        <p><strong>${s.a.name}</strong> <span class="provider-sub">(${s.a.provider})</span> &nbsp;¿es el mismo material que&nbsp; <strong>${s.b.name}</strong> <span class="provider-sub">(${s.b.provider})</span>?</p>
+        <button class="btn-primary btn-small" onclick="confirmSuggestion(${idx})">Sí, son el mismo</button>
+        <button class="btn-ghost btn-small" onclick="rejectSuggestion(${idx})">No, son distintos</button>
+      </div>`;
+    });
+  }
+  if (materialAliasesCache.length > 0) {
+    html += '<h3>Materiales ya unificados</h3><ul class="link-list">';
+    materialAliasesCache.forEach(g => {
+      html += `<li><strong>${g.canonical}</strong> <span class="provider-sub">(agrupa: ${g.aliases.join(', ')})</span> — <button class="btn-ghost btn-small" onclick="undoUnify('${g.id}')">Deshacer</button></li>`;
+    });
+    html += '</ul>';
+  }
+  area.innerHTML = html || '<p class="hint">No se detectaron nombres distintos que parezcan referirse al mismo material. Si sabes que dos cotizaciones usan nombres distintos para lo mismo, únelos manualmente abajo.</p>';
+  card.style.display = quotesCache.length >= 2 ? 'block' : 'none';
+}
 
 /* ---------- Tip de temporada ---------- */
 (function seasonTip() {
@@ -296,6 +432,7 @@ async function loadSettings() {
   document.getElementById('s-retenedor').checked = !!settings.esRetenedor;
   document.getElementById('s-anticipado').value = settings.pctAnticipado || 60;
   document.getElementById('s-disparo').value = settings.pctDisparo || 15;
+  document.getElementById('s-completitud').value = settings.toleranciaCompletitud != null ? settings.toleranciaCompletitud : 8;
 }
 
 async function saveSetting(field, value) {
@@ -309,6 +446,7 @@ document.getElementById('s-tolerancia').addEventListener('change', e => saveSett
 document.getElementById('s-retenedor').addEventListener('change', e => saveSetting('esRetenedor', e.target.checked));
 document.getElementById('s-anticipado').addEventListener('change', e => saveSetting('pctAnticipado', parseFloat(e.target.value) || 60));
 document.getElementById('s-disparo').addEventListener('change', e => saveSetting('pctDisparo', parseFloat(e.target.value) || 15));
+document.getElementById('s-completitud').addEventListener('change', e => saveSetting('toleranciaCompletitud', parseFloat(e.target.value) || 0));
 
 /* ---------- Presupuesto de obra ---------- */
 
@@ -333,8 +471,8 @@ function useMaterialInQuote(material) {
 }
 
 function computeBudgetStatus(item) {
-  const key = item.material.trim().toLowerCase();
-  const matchQty = (arr) => arr.reduce((s, o) => s + (o.items || []).filter(it => it.material.trim().toLowerCase() === key).reduce((s2, it) => s2 + (Number(it.qty) || 0), 0), 0);
+  const key = canonicalMaterial(item.material).key;
+  const matchQty = (arr) => arr.reduce((s, o) => s + (o.items || []).filter(it => canonicalMaterial(it.material).key === key).reduce((s2, it) => s2 + (Number(it.qty) || 0), 0), 0);
   const comprado = matchQty(ordersCompletedCache) + matchQty(ordersInProgressCache);
   const pctComprado = item.cantidadTotal > 0 ? (comprado / item.cantidadTotal) * 100 : 0;
   const metaAnticipada = item.cantidadTotal * ((settings.pctAnticipado || 60) / 100);
@@ -652,7 +790,7 @@ function collectItems() {
 async function loadQuotes() {
   quotesCache = await (await fetch(`${API}/quotes`)).json();
   renderQuotes(quotesCache);
-  renderItemsCompare(quotesCache);
+  renderMaterialUnification();
 }
 
 async function loadProviders() { providersCache = await (await fetch(`${API}/providers`)).json(); renderProviders(providersCache); }
@@ -721,9 +859,9 @@ function reliabilityBadgeFor(name) {
 }
 
 function priceTrendHTML(material, price) {
-  const key = material.trim().toLowerCase();
+  const key = canonicalMaterial(material).key;
   const past = [];
-  ordersCompletedCache.forEach(o => (o.items || []).forEach(it => { if (it.material.trim().toLowerCase() === key) past.push(it.price); }));
+  ordersCompletedCache.forEach(o => (o.items || []).forEach(it => { if (canonicalMaterial(it.material).key === key) past.push(it.price); }));
   if (!past.length) return '';
   const avg = past.reduce((a, b) => a + b, 0) / past.length;
   if (avg === 0) return '';
@@ -814,9 +952,9 @@ function pickBestForMaterial(candidates) {
 function renderItemsCompare(quotes) {
   const byMaterial = {};
   quotes.forEach(q => q.items.forEach(it => {
-    const key = it.material.trim().toLowerCase();
-    if (!byMaterial[key]) byMaterial[key] = { label: it.material, candidates: [] };
-    byMaterial[key].candidates.push({ provider: q.provider, allIn: it.price * (1 + (q.iva || 0) / 100), item: it, qDays: q.days, disponible: it.disponible, qty: it.qty });
+    const { key, label } = canonicalMaterial(it.material);
+    if (!byMaterial[key]) byMaterial[key] = { key, label, candidates: [] };
+    byMaterial[key].candidates.push({ provider: q.provider, allIn: it.price * (1 + (q.iva || 0) / 100), item: it, qDays: q.days, disponible: it.disponible, qty: it.qty, rawMaterial: it.material });
   }));
   return byMaterial;
 }
@@ -844,40 +982,49 @@ function renderPlanRecomendado(quotes) {
     });
     out += '</tbody></table></div>';
 
-    // Un solo proveedor vs combinar
-    const allMaterialKeys = materials.map(m => m.label.trim().toLowerCase());
+    // Un solo proveedor (que cubra TODO el pedido) vs combinar
+    const allMaterialKeys = materials.map(m => m.key);
     const providerNames = [...new Set(quotes.map(q => q.provider))];
     let singleBest = null;
+    const coverageByProvider = {};
     providerNames.forEach(name => {
-      let coversAll = true, total = 0;
+      let total = 0; const covered = [], missing = [];
       allMaterialKeys.forEach(key => {
         const cand = (byMaterial[key].candidates || []).find(c => c.provider === name && c.disponible >= c.qty);
-        if (!cand) { coversAll = false; return; }
+        if (!cand) { missing.push(byMaterial[key].label); return; }
+        covered.push(byMaterial[key].label);
         total += cand.allIn * cand.qty;
       });
-      if (coversAll && (!singleBest || total < singleBest.total)) singleBest = { name, total };
+      coverageByProvider[name] = { total, covered, missing, coversAll: missing.length === 0 };
+      if (missing.length === 0 && (!singleBest || total < singleBest.total)) singleBest = { name, total };
     });
 
     let mixedTotal = 0; const mixedProviders = new Set();
     materials.forEach(m => { const pick = pickBestForMaterial(m.candidates); mixedTotal += pick.chosen.allIn * pick.chosen.qty; mixedProviders.add(pick.chosen.provider); });
 
-    if (mixedProviders.size > 1) {
+    if (mixedProviders.size > 1 || singleBest) {
       out += '<h3>¿Un solo proveedor o compra combinada?</h3>';
+      out += `<p class="hint">Necesitas en total: ${materials.map(m => m.label).join(', ')}.</p>`;
+      const umbral = settings.toleranciaCompletitud != null ? settings.toleranciaCompletitud : 8;
       if (singleBest) {
         const savings = singleBest.total - mixedTotal;
-        const savingsPct = (savings / singleBest.total) * 100;
-        out += `<div class="plan-box"><h4>Opción A — Todo con ${singleBest.name}</h4><div class="total-line">$${fmt(singleBest.total)}</div>
-          <ul><li>Un solo pedido, un solo envío, más poder de negociación por volumen.</li></ul></div>
-          <div class="plan-box"><h4>Opción B — Mejor proveedor por material</h4><div class="total-line">$${fmt(mixedTotal)}</div>
+        const savingsPct = singleBest.total > 0 ? (savings / singleBest.total) * 100 : 0;
+        out += `<div class="plan-box"><h4>Opción A — Todo con ${singleBest.name} (pedido completo)</h4><div class="total-line">$${fmt(singleBest.total)}</div>
+          <ul><li>Un solo pedido, un solo envío, una sola relación de pago — cubre el 100% de lo que necesitas.</li>
+          <li>Más poder de negociación por volumen frente a un solo proveedor.</li></ul></div>
+          <div class="plan-box"><h4>Opción B — Mejor precio por material, combinando proveedores</h4><div class="total-line">$${fmt(mixedTotal)}</div>
           <div class="cons-title">Contras de combinar:</div>
           <ul><li>Vas a recibir ${mixedProviders.size} envíos distintos, cada uno con su propio flete (revísalo en cada cotización).</li>
           <li>Vas a manejar ${mixedProviders.size} relaciones de pago distintas en vez de una sola.</li>
-          <li>Pierdes el descuento por volumen total de comprarle todo a uno solo.</li></ul></div>`;
-        if (savings > 0 && savingsPct >= 3) out += `<div class="badge-verdict badge-mixed">Recomendación: compra combinada — ahorras $${fmt(savings)} (${fmtPct(savingsPct)}%)</div>`;
-        else out += `<div class="badge-verdict badge-single">Recomendación: un solo proveedor (${singleBest.name}) — combinar apenas ahorra ${fmtPct(Math.max(0,savingsPct))}%, no compensa la complejidad</div>`;
+          <li>Pierdes el descuento por volumen total de comprarle todo a uno solo.</li>
+          <li>Más riesgo de retrasos: si un solo proveedor de los varios se atrasa, atrasa toda la obra igual.</li></ul></div>`;
+        if (savings > 0 && savingsPct >= umbral) out += `<div class="badge-verdict badge-mixed">Recomendación: compra combinada — ahorras $${fmt(savings)} (${fmtPct(savingsPct)}%), por encima de tu umbral de ${fmtPct(umbral)}%</div>`;
+        else if (savings > 0) out += `<div class="badge-verdict badge-single">Recomendación: un solo proveedor (${singleBest.name}) — combinar solo ahorra ${fmtPct(savingsPct)}%, menos que tu umbral de ${fmtPct(umbral)}%, no compensa la complejidad de manejar ${mixedProviders.size} proveedores</div>`;
+        else out += `<div class="badge-verdict badge-single">Recomendación: un solo proveedor (${singleBest.name}) — cubre todo el pedido y ni siquiera combinando sale más barato</div>`;
       } else {
-        out += `<div class="plan-box"><h4>Compra combinada (ningún proveedor cubre todo)</h4><div class="total-line">$${fmt(mixedTotal)}</div>
-        <p class="hint">Ningún proveedor registrado tiene stock completo de todos los materiales — necesitas combinar, o conseguir otra cotización.</p></div>`;
+        out += `<div class="plan-box"><h4>Compra combinada (ningún proveedor cubre el pedido completo)</h4><div class="total-line">$${fmt(mixedTotal)}</div>
+        <p class="hint">Ningún proveedor registrado tiene stock de todos los materiales que necesitas — vas a tener que combinar sí o sí, o conseguir otra cotización que sí cubra todo. Esto es lo que le falta a cada uno:</p>
+        <ul>${providerNames.map(name => `<li><strong>${name}</strong>: le falta ${coverageByProvider[name].missing.length ? coverageByProvider[name].missing.join(', ') : 'nada — pero sin stock suficiente en algún ítem'}</li>`).join('')}</ul></div>`;
       }
     }
   }
@@ -909,8 +1056,8 @@ function renderConsolidationAlertHTML() {
   const cutoff = Date.now() - 90 * 86400000;
   const byMaterial = {};
   ordersCompletedCache.filter(o => new Date(o.fecha).getTime() >= cutoff).forEach(o => (o.items || []).forEach(it => {
-    const key = it.material.trim().toLowerCase();
-    if (!byMaterial[key]) byMaterial[key] = { label: it.material, count: 0, prices: [], qty: 0, spend: 0 };
+    const { key, label } = canonicalMaterial(it.material);
+    if (!byMaterial[key]) byMaterial[key] = { label, count: 0, prices: [], qty: 0, spend: 0 };
     byMaterial[key].count += 1; byMaterial[key].prices.push(it.price); byMaterial[key].qty += it.qty; byMaterial[key].spend += it.qty * it.price;
   }));
   const fragmented = Object.values(byMaterial).filter(m => m.count >= 3);
@@ -1010,7 +1157,7 @@ toggleGarantiaCustom(); toggleGarantiaDiasCustom();
 
 (async function init() {
   await loadSettings();
-  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget()]);
+  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget(), loadMaterialAliases()]);
   await loadQuotes();
 })();
 </script>
