@@ -6,11 +6,47 @@ const crypto = require('crypto');
 const { nanoid } = require('nanoid');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
+const { MongoClient } = require('mongodb');
 
-const adapter = new FileSync(path.join(__dirname, 'db.json'));
-const db = low(adapter);
+// ---------- Almacenamiento persistente ----------
+// Si se configura MONGODB_URI (una base de datos gratuita en MongoDB Atlas, ver
+// README), todos los datos de Nexobra se guardan ahí — sobreviven a que el servidor
+// se duerma/reinicie, que es lo que pasa con el disco local en el plan gratuito de
+// Render. Si no se configura, sigue funcionando con el archivo local db.json de
+// siempre (útil para probar en tu computador), aunque en Render ese archivo se borra
+// cada vez que el servicio se reinicia.
+class MongoStateAdapter {
+  constructor(uri, dbName) {
+    this.uri = uri;
+    this.dbName = dbName || 'nexobra';
+    this.client = null;
+    this.collection = null;
+    this._writeQueue = Promise.resolve();
+  }
+  async _ensureConnected() {
+    if (!this.collection) {
+      this.client = new MongoClient(this.uri);
+      await this.client.connect();
+      this.collection = this.client.db(this.dbName).collection('nexobra_state');
+    }
+  }
+  async read() {
+    await this._ensureConnected();
+    const doc = await this.collection.findOne({ _id: 'main' });
+    return doc ? doc.state : null;
+  }
+  write(data) {
+    // Encola las escrituras para que siempre queden en el mismo orden en que se
+    // pidieron, aunque una tarde más que otra en llegar a la base de datos.
+    this._writeQueue = this._writeQueue.then(async () => {
+      await this._ensureConnected();
+      await this.collection.updateOne({ _id: 'main' }, { $set: { state: data, updatedAt: new Date() } }, { upsert: true });
+    });
+    return this._writeQueue;
+  }
+}
 
-// Fusiona con lo que ya exista en db.json (importante en producción: no queremos
+// Fusiona con lo que ya exista guardado (importante en producción: no queremos
 // perder cotizaciones/proyectos ya guardados solo porque agregamos colecciones nuevas).
 const DEFAULT_STATE = {
   quotes: [],
@@ -25,12 +61,30 @@ const DEFAULT_STATE = {
   groups: [],
   empresas: [],
   sessions: [],
+  activityLog: [],
   settings: {
     costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8,
     empresaNombre: '', empresaNit: '', empresaDireccion: ''
   }
 };
-db.setState(Object.assign({}, DEFAULT_STATE, db.getState())).write();
+
+// `db` se asigna dentro de startServer(), antes de que se acepte cualquier petición
+// — el resto del archivo (todas las rutas) puede seguir usando `db` con toda
+// normalidad porque para cuando llegue una petición real ya está listo.
+let db;
+const usingMongo = !!process.env.MONGODB_URI;
+
+function fmtLog(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(n || 0); }
+
+function logActivity(req, action, entity, summary) {
+  try {
+    const log = db.get('activityLog');
+    log.push({ id: nanoid(), ts: new Date().toISOString(), groupId: (req && req.groupId) || null, action, entity, summary }).write();
+    // Evita que el historial crezca sin límite para siempre — conserva las últimas 5000 acciones.
+    const all = log.value();
+    if (all.length > 5000) db.set('activityLog', all.slice(all.length - 5000)).write();
+  } catch (e) { /* el historial nunca debe tumbar una petición */ }
+}
 
 const app = express();
 app.use(cors());
@@ -239,6 +293,7 @@ app.post('/api/empresas', (req, res) => {
   if (!nombre) return res.status(400).json({ error: 'Escribe la razón social de la empresa.' });
   const empresa = { id: nanoid(), groupId: req.groupId, nombre: String(nombre).trim(), nit: String(nit || '').trim(), direccion: String(direccion || '').trim() };
   db.get('empresas').push(empresa).write();
+  logActivity(req, 'crear', 'empresa', `Empresa agregada al grupo: ${empresa.nombre}`);
   res.status(201).json(empresa);
 });
 
@@ -252,6 +307,7 @@ app.put('/api/empresas/:id', (req, res) => {
   if (nit != null) updates.nit = String(nit).trim();
   if (direccion != null) updates.direccion = String(direccion).trim();
   ref.assign(updates).write();
+  logActivity(req, 'editar', 'empresa', `Empresa actualizada: ${ref.value().nombre}`);
   res.json(ref.value());
 });
 
@@ -259,6 +315,23 @@ app.delete('/api/empresas/:id', (req, res) => {
   const empresa = db.get('empresas').find({ id: req.params.id }).value();
   if (!empresa || (req.groupId && empresa.groupId !== req.groupId)) return res.status(404).json({ error: 'Empresa no encontrada.' });
   db.get('empresas').remove({ id: req.params.id }).write();
+  logActivity(req, 'eliminar', 'empresa', `Empresa eliminada del grupo: ${empresa.nombre}`);
+  res.status(204).end();
+});
+
+// ---------- Historial de acciones ----------
+// Registro de todo lo que se crea/edita/elimina en Nexobra Mercado, para poder
+// consultar el histórico y verificar cotizaciones nuevas contra lo ya registrado.
+
+app.get('/api/activity', (req, res) => {
+  const list = scopeByGroup(db.get('activityLog').value(), req);
+  res.json([...list].reverse()); // más reciente primero
+});
+
+app.delete('/api/activity', (req, res) => {
+  const all = db.get('activityLog').value();
+  const kept = req.groupId ? all.filter(a => a.groupId !== req.groupId) : [];
+  db.set('activityLog', kept).write();
   res.status(204).end();
 });
 
@@ -327,6 +400,7 @@ app.post('/api/quotes', (req, res) => {
 
   db.get('quotes').push(quote).write();
   ensureProvider(provider, phone || null);
+  logActivity(req, 'crear', 'cotizacion', `Cotización de ${provider} (${cleanItems.length} ítem${cleanItems.length === 1 ? '' : 's'})`);
 
   res.status(201).json(calcQuote(quote, getSettings()));
 });
@@ -371,11 +445,14 @@ app.put('/api/quotes/:id', (req, res) => {
 
   ref.assign(updates).write();
   ensureProvider(provider, phone || null);
+  logActivity(req, 'editar', 'cotizacion', `Cotización de ${provider} actualizada (${cleanItems.length} ítem${cleanItems.length === 1 ? '' : 's'})`);
   res.json(calcQuote(ref.value(), getSettings()));
 });
 
 app.delete('/api/quotes/:id', (req, res) => {
+  const existing = db.get('quotes').find({ id: req.params.id }).value();
   db.get('quotes').remove({ id: req.params.id }).write();
+  if (existing) logActivity(req, 'eliminar', 'cotizacion', `Cotización de ${existing.provider} eliminada`);
   res.status(204).end();
 });
 
@@ -441,6 +518,7 @@ app.post('/api/orders', (req, res) => {
     fechaPedido: new Date().toISOString().slice(0, 10)
   };
   db.get('ordersInProgress').push(entry).write();
+  logActivity(req, 'crear', 'pedido', `Pedido a ${quote.provider}${parcial ? ' (parcial)' : ''} por $${fmtLog(calc.total)}`);
   res.status(201).json(entry);
 });
 
@@ -466,6 +544,7 @@ app.post('/api/orders/:id/complete', (req, res) => {
   const completed = { id: nanoid(), provider: order.provider, items: order.items, total: order.total, onTime, quality, fecha: new Date().toISOString().slice(0, 10) };
   db.get('completedOrders').push(completed).write();
   db.get('ordersInProgress').remove({ id: order.id }).write();
+  logActivity(req, 'completar', 'pedido', `Pedido de ${order.provider} recibido — ${onTime ? 'a tiempo' : 'con retraso'}, calidad ${quality}`);
 
   res.json(completed);
 });
@@ -484,6 +563,7 @@ app.post('/api/budget', (req, res) => {
   }
   const item = { id: nanoid(), material: String(material).trim(), unidad: unidad ? String(unidad).trim() : '', cantidadTotal: cantidad, obraId: obraId || null, empresaId: empresaId || null };
   db.get('budgetItems').push(item).write();
+  logActivity(req, 'crear', 'presupuesto', `Material de presupuesto: ${item.material} (${fmtLog(cantidad)} ${item.unidad || 'unid.'})`);
   res.status(201).json(item);
 });
 
@@ -499,11 +579,14 @@ app.post('/api/budget/bulk', (req, res) => {
     db.get('budgetItems').push(item).write();
     created.push(item);
   });
+  if (created.length > 0) logActivity(req, 'importar', 'presupuesto', `${created.length} materiales de presupuesto importados`);
   res.status(201).json({ count: created.length, items: created });
 });
 
 app.delete('/api/budget/:id', (req, res) => {
+  const existing = db.get('budgetItems').find({ id: req.params.id }).value();
   db.get('budgetItems').remove({ id: req.params.id }).write();
+  if (existing) logActivity(req, 'eliminar', 'presupuesto', `Material de presupuesto eliminado: ${existing.material}`);
   res.status(204).end();
 });
 
@@ -539,11 +622,14 @@ app.post('/api/material-aliases', (req, res) => {
   }
   const group = { id: nanoid(), canonical, aliases: Array.from(new Set([...names, normalizeMaterialName(canonical)])) };
   groups.push(group).write();
+  logActivity(req, 'crear', 'unificacion', `Materiales unificados como "${canonical}"`);
   res.status(201).json(group);
 });
 
 app.delete('/api/material-aliases/:id', (req, res) => {
+  const existing = db.get('materialAliases').find({ id: req.params.id }).value();
   db.get('materialAliases').remove({ id: req.params.id }).write();
+  if (existing) logActivity(req, 'eliminar', 'unificacion', `Se deshizo la unificación de "${existing.canonical}"`);
   res.status(204).end();
 });
 
@@ -561,11 +647,14 @@ app.post('/api/obras', (req, res) => {
   if (!nombre) return res.status(400).json({ error: 'Escribe un nombre para la obra/proyecto.' });
   const obra = { id: nanoid(), nombre, empresaId: req.body.empresaId || null };
   db.get('obras').push(obra).write();
+  logActivity(req, 'crear', 'obra', `Obra creada: ${nombre}`);
   res.status(201).json(obra);
 });
 
 app.delete('/api/obras/:id', (req, res) => {
+  const existing = db.get('obras').find({ id: req.params.id }).value();
   db.get('obras').remove({ id: req.params.id }).write();
+  if (existing) logActivity(req, 'eliminar', 'obra', `Obra eliminada: ${existing.nombre}`);
   res.status(204).end();
 });
 
@@ -588,11 +677,14 @@ app.post('/api/agreements', (req, res) => {
   const agreement = { id: nanoid(), provider: String(provider).trim(), material: String(material).trim(), price: priceNum, iva: Number(iva) || 0, vigenciaHasta, empresaId: empresaId || null };
   db.get('agreements').push(agreement).write();
   ensureProvider(provider, null);
+  logActivity(req, 'crear', 'acuerdo', `Acuerdo marco con ${agreement.provider} para ${agreement.material} — $${fmtLog(priceNum)}, vigente hasta ${vigenciaHasta}`);
   res.status(201).json(agreement);
 });
 
 app.delete('/api/agreements/:id', (req, res) => {
+  const existing = db.get('agreements').find({ id: req.params.id }).value();
   db.get('agreements').remove({ id: req.params.id }).write();
+  if (existing) logActivity(req, 'eliminar', 'acuerdo', `Acuerdo marco eliminado: ${existing.provider} — ${existing.material}`);
   res.status(204).end();
 });
 
@@ -772,6 +864,19 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Nexobra backend corriendo en http://localhost:${PORT}`);
+async function startServer() {
+  const adapter = usingMongo
+    ? new MongoStateAdapter(process.env.MONGODB_URI, process.env.MONGODB_DB)
+    : new FileSync(path.join(__dirname, 'db.json'));
+  db = await low(adapter);
+  await db.setState(Object.assign({}, DEFAULT_STATE, db.getState())).write();
+
+  app.listen(PORT, () => {
+    console.log(`Nexobra backend corriendo en http://localhost:${PORT}` + (usingMongo ? ' — datos persistentes en MongoDB' : ' — datos en archivo local db.json (no persistente en Render sin MONGODB_URI)'));
+  });
+}
+
+startServer().catch(err => {
+  console.error('No se pudo iniciar Nexobra:', err);
+  process.exit(1);
 });
