@@ -235,6 +235,7 @@
     <a href="#insight-card">Plan recomendado</a>
     <a href="#card-pedidos">Pedidos</a>
     <a href="#card-proveedores">Proveedores</a>
+    <a href="#card-historial">Historial</a>
     <a href="#card-ajustes">Ajustes</a>
   </nav>
 
@@ -443,6 +444,17 @@
     <div id="providers-area"><p class="empty">Cargando…</p></div>
   </div>
 
+  <div class="card card-mix" id="card-historial">
+    <h2><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 16 14"></polyline></svg></span>Historial de acciones</h2>
+    <p class="hint">Aquí queda registrada cada cotización, edición, pedido, acuerdo, obra o empresa que se crea, edita o elimina en la aplicación — para que siempre puedas consultar qué pasó y cuándo, aunque haya pasado tiempo. Descarga el archivo en cualquier momento para guardarlo o revisarlo fuera de la app.</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+      <button class="btn-ghost btn-small" onclick="loadActivity()">Actualizar</button>
+      <button class="btn-primary btn-small" onclick="exportActivityCSV()">Descargar historial (.csv)</button>
+      <button class="btn-ghost btn-small" onclick="clearActivity()" style="color:#c0392b; border-color:#c0392b;">Borrar historial</button>
+    </div>
+    <div id="historial-area"><p class="empty">Cargando…</p></div>
+  </div>
+
   <footer>Nexobra Mercado · datos guardados en tu propio servidor</footer>
 </div>
 
@@ -452,7 +464,7 @@ function fmt(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits:
 function fmtPct(n) { return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 }).format(n || 0); }
 
 let settings = { costoCapitalAnual: 0, tolerancia: 0, esRetenedor: true, pctAnticipado: 60, pctDisparo: 15, toleranciaCompletitud: 8 };
-let quotesCache = [], providersCache = [], budgetCache = [], ordersInProgressCache = [], ordersCompletedCache = [], materialAliasesCache = [];
+let quotesCache = [], providersCache = [], budgetCache = [], ordersInProgressCache = [], ordersCompletedCache = [], materialAliasesCache = [], activityCache = [];
 
 /* ---------- Sesión (grupo empresarial) y empresa activa ---------- */
 // Nexobra puede usarse solo (sin login) o protegido por el login de un "grupo
@@ -1845,8 +1857,68 @@ function renderEmpresasArea() {
 async function afterLogin() {
   updateSessionUI();
   await loadSettings();
-  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget(), loadMaterialAliases(), loadObras(), loadAgreements()]);
+  await Promise.all([loadOrdersCompleted(), loadOrdersInProgress(), loadProviders(), loadBudget(), loadMaterialAliases(), loadObras(), loadAgreements(), loadActivity()]);
   await loadQuotes();
+}
+
+/* ---------- Historial de acciones ---------- */
+// Registro de todo lo creado/editado/eliminado en la app (cotizaciones, pedidos,
+// presupuesto, acuerdos, obras, empresas). Permite consultar qué pasó y cuándo, y
+// se puede descargar como archivo .csv para guardarlo fuera de la app.
+
+const ACTIVITY_ACTION_LABELS = { crear: 'Creó', editar: 'Editó', eliminar: 'Eliminó', completar: 'Completó' };
+const ACTIVITY_ENTITY_LABELS = {
+  cotizacion: 'Cotización', pedido: 'Pedido', presupuesto: 'Presupuesto', 'material-alias': 'Unificación de material',
+  obra: 'Obra/proyecto', acuerdo: 'Acuerdo marco', empresa: 'Empresa'
+};
+
+function fmtActivityDate(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-CO') + ' ' + d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return iso || ''; }
+}
+
+async function loadActivity() {
+  try {
+    const res = await apiFetch(`${API}/activity`);
+    activityCache = await res.json();
+  } catch (e) { activityCache = []; }
+  renderActivity();
+}
+
+function renderActivity() {
+  const area = document.getElementById('historial-area');
+  if (!area) return;
+  if (!activityCache.length) { area.innerHTML = '<p class="empty">Todavía no hay acciones registradas.</p>'; return; }
+  area.innerHTML = '<div class="table-scroll"><table><thead><tr><th>Fecha y hora</th><th>Acción</th><th>Tipo</th><th>Detalle</th></tr></thead><tbody>' +
+    activityCache.map(a => `<tr><td>${fmtActivityDate(a.ts)}</td><td>${ACTIVITY_ACTION_LABELS[a.action] || a.action}</td><td>${ACTIVITY_ENTITY_LABELS[a.entity] || a.entity}</td><td>${(a.summary || '').replace(/</g, '&lt;')}</td></tr>`).join('') +
+    '</tbody></table></div>';
+}
+
+function csvEscapeCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportActivityCSV() {
+  if (!activityCache.length) { alert('Todavía no hay historial para descargar.'); return; }
+  const header = ['Fecha y hora', 'Acción', 'Tipo', 'Detalle'];
+  const rows = activityCache.map(a => [fmtActivityDate(a.ts), ACTIVITY_ACTION_LABELS[a.action] || a.action, ACTIVITY_ENTITY_LABELS[a.entity] || a.entity, a.summary || '']);
+  const csv = '﻿' + [header, ...rows].map(r => r.map(csvEscapeCell).join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `historial-nexobra-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function clearActivity() {
+  if (!confirm('¿Borrar todo el historial de acciones? Esto no afecta tus cotizaciones, pedidos ni acuerdos — solo borra el registro de qué pasó y cuándo. Esta acción no se puede deshacer.')) return;
+  await apiFetch(`${API}/activity`, { method: 'DELETE' });
+  await loadActivity();
 }
 
 /* ---------- Init ---------- */
